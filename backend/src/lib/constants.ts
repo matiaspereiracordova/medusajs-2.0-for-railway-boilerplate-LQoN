@@ -108,3 +108,26 @@ export const ODOO_PASSWORD = process.env.ODOO_PASSWORD;
  * Disable Admin
  */
 export const SHOULD_DISABLE_ADMIN = process.env.MEDUSA_DISABLE_ADMIN === 'true'
+
+/**
+ * Chilean Configuration
+ */
+export const CHILEAN_CONFIG = {
+  CURRENCY: 'CLP',
+  COUNTRY_CODE: 'CL',
+  LOCALE: 'es-CL',
+  TIMEZONE: 'America/Santiago',
+  TAX_RATE: 0.19, // 19% IVA
+  DEFAULT_REGION: process.env.NEXT_PUBLIC_DEFAULT_REGION || 'cl'
+} as const;
+
+/**
+ * Transbank Configuration (for future integration)
+ */
+export const TRANSBANK_CONFIG = {
+  ENVIRONMENT: process.env.TRANSBANK_ENVIRONMENT || 'integration', // integration, production
+  COMMERCE_CODE: process.env.TRANSBANK_COMMERCE_CODE,
+  API_KEY: process.env.TRANSBANK_API_KEY,
+  WEBPAY_PLUS_URL: process.env.TRANSBANK_WEBPAY_PLUS_URL,
+  ONECLICK_URL: process.env.TRANSBANK_ONECLICK_URL,
+} as const;

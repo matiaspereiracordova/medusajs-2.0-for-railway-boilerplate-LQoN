@@ -54,7 +54,7 @@
     "@medusajs/ui-preset": "preview",
     "@playwright/test": "^1.41.1",
     "@types/lodash": "^4.14.195",
-    "@types/node": "17.0.21",
+    "@types/node": "^17.0.21",
     "@types/pg": "^8.11.0",
     "@types/react": "^18.2.42",
     "@types/react-dom": "^18.2.18",
