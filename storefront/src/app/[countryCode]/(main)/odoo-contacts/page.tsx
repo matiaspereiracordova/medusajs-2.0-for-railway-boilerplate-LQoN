@@ -1,10 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Button } from "@/modules/common/components/button";
-import { Container } from "@/modules/layout/components/container";
-import { Text } from "@/modules/common/components/text";
-import { Heading } from "@/modules/common/components/heading";
+import { Button, Text, Heading } from "@medusajs/ui";
 
 interface Contact {
   id: number;
@@ -106,40 +103,45 @@ export default function OdooContactsPage() {
 
   if (loading) {
     return (
-      <Container className="py-8">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
-            <Text>Cargando contactos de Odoo...</Text>
+      <div className="py-8">
+        <div className="content-container">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+              <Text>Cargando contactos de Odoo...</Text>
+            </div>
           </div>
         </div>
-      </Container>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Container className="py-8">
-        <div className="text-center">
-          <div className="text-red-500 text-6xl mb-4">❌</div>
-          <Heading level="h1" className="text-red-600 mb-4">
-            Error al cargar contactos
-          </Heading>
-          <Text className="text-gray-600 mb-6">{error}</Text>
-          <Button onClick={fetchContacts} className="bg-blue-600 hover:bg-blue-700">
-            Reintentar
-          </Button>
+      <div className="py-8">
+        <div className="content-container">
+          <div className="text-center">
+            <div className="text-red-500 text-6xl mb-4">❌</div>
+            <Heading level="h1" className="text-red-600 mb-4">
+              Error al cargar contactos
+            </Heading>
+            <Text className="text-gray-600 mb-6">{error}</Text>
+            <Button onClick={fetchContacts} className="bg-blue-600 hover:bg-blue-700">
+              Reintentar
+            </Button>
+          </div>
         </div>
-      </Container>
+      </div>
     );
   }
 
   return (
-    <Container className="py-8">
-      <div className="mb-8">
-        <Heading level="h1" className="text-3xl font-bold mb-4">
-          📞 Contactos de Odoo
-        </Heading>
+    <div className="py-8">
+      <div className="content-container">
+        <div className="mb-8">
+          <Heading level="h1" className="text-3xl font-bold mb-4">
+            📞 Contactos de Odoo
+          </Heading>
         
         {config && (
           <div className="bg-gray-100 p-4 rounded-lg mb-6">
@@ -264,17 +266,18 @@ export default function OdooContactsPage() {
         ))}
       </div>
 
-      {contacts.length === 0 && (
-        <div className="text-center py-12">
-          <div className="text-gray-400 text-6xl mb-4">📭</div>
-          <Heading level="h2" className="text-gray-600 mb-2">
-            No hay contactos disponibles
-          </Heading>
-          <Text className="text-gray-500">
-            No se encontraron contactos en Odoo o hubo un problema con la conexión.
-          </Text>
-        </div>
-      )}
-    </Container>
+        {contacts.length === 0 && (
+          <div className="text-center py-12">
+            <div className="text-gray-400 text-6xl mb-4">📭</div>
+            <Heading level="h2" className="text-gray-600 mb-2">
+              No hay contactos disponibles
+            </Heading>
+            <Text className="text-gray-500">
+              No se encontraron contactos en Odoo o hubo un problema con la conexión.
+            </Text>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
