@@ -97,6 +97,14 @@ export const WORKER_MODE =
   (process.env.MEDUSA_WORKER_MODE as 'worker' | 'server' | 'shared' | undefined) ?? 'shared'
 
 /**
+ * (optional) Odoo configuration
+ */
+export const ODOO_URL = process.env.ODOO_URL;
+export const ODOO_DATABASE = process.env.ODOO_DATABASE;
+export const ODOO_USERNAME = process.env.ODOO_USERNAME;
+export const ODOO_PASSWORD = process.env.ODOO_PASSWORD;
+
+/**
  * Disable Admin
  */
 export const SHOULD_DISABLE_ADMIN = process.env.MEDUSA_DISABLE_ADMIN === 'true'
