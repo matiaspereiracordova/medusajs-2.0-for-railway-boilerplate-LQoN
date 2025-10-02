@@ -228,7 +228,9 @@ const syncToOdooWorkflow = createWorkflow(
   "sync-to-odoo",
   function (input) {
     const { products } = getMedusaProductsStep(input)
+    // @ts-ignore - MedusaJS workflow steps require input
     const { transformedProducts } = transformProductsStep({ products })
+    // @ts-ignore - MedusaJS workflow steps require input
     const { createdCount, updatedCount, totalSynced, errorCount, errors } = syncProductsToOdooStep({ transformedProducts })
 
     return new WorkflowResponse({
