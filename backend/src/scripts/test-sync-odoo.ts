@@ -1,18 +1,19 @@
 import { MedusaContainer } from "@medusajs/framework/types"
 import syncToOdooWorkflow from "../workflows/sync-to-odoo.js"
 
-export default async function syncProductsToOdooJob(container: MedusaContainer) {
-  console.log("🔄 Iniciando sincronización de productos hacia ODOO...")
+export default async function testSyncToOdoo(container: MedusaContainer) {
+  console.log("🧪 Iniciando prueba de sincronización con ODOO...")
 
   try {
+    // Ejecutar sincronización de prueba con solo 2 productos
     const result = await syncToOdooWorkflow(container).run({
       input: {
-        limit: 50, // Sincronizar 50 productos por vez
+        limit: 2, // Solo 2 productos para prueba
         offset: 0,
       },
     })
 
-    console.log(`✅ Sincronización completada:`)
+    console.log(`✅ Prueba de sincronización completada:`)
     console.log(`   - Productos sincronizados: ${result.result.syncedProducts}`)
     console.log(`   - Productos creados: ${result.result.createdProducts}`)
     console.log(`   - Productos actualizados: ${result.result.updatedProducts}`)
@@ -24,12 +25,10 @@ export default async function syncProductsToOdooJob(container: MedusaContainer) 
         console.log(`   - ${err.product} (${err.medusaId}): ${err.error}`)
       })
     }
-  } catch (error) {
-    console.error("❌ Error en sincronización hacia ODOO:", error)
-  }
-}
 
-export const config = {
-  name: "sync-products-to-odoo",
-  schedule: "* * * * *", // Cada minuto (para pruebas)
+    return result.result
+  } catch (error) {
+    console.error("❌ Error en prueba de sincronización:", error)
+    throw error
+  }
 }

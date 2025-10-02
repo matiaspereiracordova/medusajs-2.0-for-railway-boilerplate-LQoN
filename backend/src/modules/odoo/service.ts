@@ -121,35 +121,55 @@ export default class OdooModuleService {
   async createProduct(productData: any): Promise<number> {
     await this.login()
 
-    return await this.client.request("call", {
-      service: "object",
-      method: "execute_kw",
-      args: [
-        this.options.dbName,
-        this.uid,
-        this.options.apiKey,
-        "product.template",
-        "create",
-        [productData],
-      ],
-    })
+    try {
+      console.log(`📤 Creando producto en Odoo:`, JSON.stringify(productData, null, 2))
+      
+      const result = await this.client.request("call", {
+        service: "object",
+        method: "execute_kw",
+        args: [
+          this.options.dbName,
+          this.uid,
+          this.options.apiKey,
+          "product.template",
+          "create",
+          [productData],
+        ],
+      })
+
+      console.log(`✅ Producto creado exitosamente con ID: ${result}`)
+      return result as number
+    } catch (error: any) {
+      console.error(`❌ Error creando producto en Odoo:`, error)
+      throw new Error(`Error creando producto: ${error.message || error}`)
+    }
   }
 
   async updateProduct(productId: number, productData: any): Promise<boolean> {
     await this.login()
 
-    return await this.client.request("call", {
-      service: "object",
-      method: "execute_kw",
-      args: [
-        this.options.dbName,
-        this.uid,
-        this.options.apiKey,
-        "product.template",
-        "write",
-        [[productId], productData],
-      ],
-    })
+    try {
+      console.log(`📤 Actualizando producto en Odoo (ID: ${productId}):`, JSON.stringify(productData, null, 2))
+      
+      const result = await this.client.request("call", {
+        service: "object",
+        method: "execute_kw",
+        args: [
+          this.options.dbName,
+          this.uid,
+          this.options.apiKey,
+          "product.template",
+          "write",
+          [[productId], productData],
+        ],
+      })
+
+      console.log(`✅ Producto actualizado exitosamente`)
+      return result as boolean
+    } catch (error: any) {
+      console.error(`❌ Error actualizando producto en Odoo:`, error)
+      throw new Error(`Error actualizando producto: ${error.message || error}`)
+    }
   }
 
   async searchProductByExternalId(externalId: string): Promise<OdooProduct[]> {

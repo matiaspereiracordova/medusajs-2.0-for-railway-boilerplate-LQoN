@@ -18,6 +18,12 @@ type SyncToOdooWorkflowOutput = {
   syncedProducts: number
   createdProducts: number
   updatedProducts: number
+  errorCount: number
+  errors: Array<{
+    product: string
+    medusaId: string
+    error: string
+  }>
 }
 
 // Step 1: Obtener productos de Medusa
@@ -63,30 +69,55 @@ const transformProductsStep = createStep(
     const transformedProducts = []
 
     for (const product of products) {
-      // Buscar si el producto ya existe en ODOO
-      const existingOdooProducts = await odooModuleService.searchProductByExternalId(
-        product.id
-      )
+      try {
+        // Buscar si el producto ya existe en ODOO
+        const existingOdooProducts = await odooModuleService.searchProductByExternalId(
+          product.id
+        )
 
-      const odooProductData = {
-        name: product.title,
-        code: product.handle,
-        list_price: product.variants?.[0]?.prices?.[0]?.amount || 0,
-        currency_id: 1, // ID de la moneda en ODOO (ajustar según configuración)
-        type: "product",
-        sale_ok: true,
-        purchase_ok: true,
-        x_medusa_id: product.id, // Campo personalizado para almacenar ID de Medusa
-        description: product.description || "",
-        // Agregar más campos según necesidades
+        // Obtener el precio del primer variant disponible
+        let productPrice = 0
+        if (product.variants && product.variants.length > 0) {
+          const firstVariant = product.variants[0]
+          if (firstVariant.prices && firstVariant.prices.length > 0) {
+            productPrice = firstVariant.prices[0].amount / 100 // Convertir de centavos
+          }
+        }
+
+        const odooProductData = {
+          name: product.title,
+          code: product.handle || `MEDUSA_${product.id}`,
+          list_price: productPrice,
+          currency_id: 1, // ID de la moneda en ODOO (ajustar según configuración)
+          type: "product",
+          sale_ok: true,
+          purchase_ok: true,
+          x_medusa_id: product.id, // Campo personalizado para almacenar ID de Medusa
+          description: product.description || "",
+          default_code: product.handle || `MEDUSA_${product.id}`,
+          // Campos adicionales para mejor integración
+          active: product.status === "published",
+          categ_id: false, // Categoría por defecto, se puede mapear después
+          uom_id: 1, // Unidad de medida por defecto
+          uom_po_id: 1, // Unidad de medida de compra por defecto
+          // Información de variantes si existe
+          ...(product.variants && product.variants.length > 1 && {
+            // Si hay múltiples variantes, crear como plantilla de producto
+            has_variants: true,
+          }),
+        }
+
+        transformedProducts.push({
+          medusaProduct: product,
+          odooProductData,
+          existsInOdoo: existingOdooProducts.length > 0,
+          odooProductId: existingOdooProducts[0]?.id,
+        })
+
+        console.log(`📦 Producto transformado: ${product.title}`)
+      } catch (error) {
+        console.error(`❌ Error transformando producto ${product.title}:`, error)
       }
-
-      transformedProducts.push({
-        medusaProduct: product,
-        odooProductData,
-        existsInOdoo: existingOdooProducts.length > 0,
-        odooProductId: existingOdooProducts[0]?.id,
-      })
     }
 
     return new StepResponse({ transformedProducts })
@@ -101,29 +132,58 @@ const syncProductsToOdooStep = createStep(
 
     let createdCount = 0
     let updatedCount = 0
+    let errorCount = 0
+    const errors = []
 
-    for (const { odooProductData, existsInOdoo, odooProductId } of transformedProducts) {
+    console.log(`🔄 Iniciando sincronización de ${transformedProducts.length} productos con ODOO...`)
+
+    for (const { medusaProduct, odooProductData, existsInOdoo, odooProductId } of transformedProducts) {
       try {
+        console.log(`📤 Procesando: ${odooProductData.name}`)
+        
         if (existsInOdoo && odooProductId) {
           // Actualizar producto existente
+          console.log(`🔄 Actualizando producto existente en ODOO: ${odooProductData.name} (ID: ${odooProductId})`)
           await odooModuleService.updateProduct(odooProductId, odooProductData)
           updatedCount++
           console.log(`✅ Producto actualizado en ODOO: ${odooProductData.name}`)
         } else {
           // Crear nuevo producto
+          console.log(`➕ Creando nuevo producto en ODOO: ${odooProductData.name}`)
           const newOdooProductId = await odooModuleService.createProduct(odooProductData)
           createdCount++
           console.log(`✅ Producto creado en ODOO: ${odooProductData.name} (ID: ${newOdooProductId})`)
         }
-      } catch (error) {
-        console.error(`❌ Error sincronizando producto ${odooProductData.name}:`, error)
+      } catch (error: any) {
+        errorCount++
+        const errorMsg = `Error sincronizando producto ${odooProductData.name}: ${error.message || error}`
+        console.error(`❌ ${errorMsg}`)
+        errors.push({
+          product: odooProductData.name,
+          medusaId: medusaProduct.id,
+          error: error.message || error
+        })
       }
+    }
+
+    console.log(`📊 Resumen de sincronización:`)
+    console.log(`   ✅ Productos creados: ${createdCount}`)
+    console.log(`   🔄 Productos actualizados: ${updatedCount}`)
+    console.log(`   ❌ Errores: ${errorCount}`)
+    
+    if (errors.length > 0) {
+      console.log(`❌ Productos con errores:`)
+      errors.forEach(err => {
+        console.log(`   - ${err.product} (${err.medusaId}): ${err.error}`)
+      })
     }
 
     return new StepResponse({
       createdCount,
       updatedCount,
       totalSynced: createdCount + updatedCount,
+      errorCount,
+      errors,
     })
   }
 )
@@ -134,12 +194,14 @@ const syncToOdooWorkflow = createWorkflow(
   function (input) {
     const { products } = getMedusaProductsStep(input)
     const { transformedProducts } = transformProductsStep()
-    const { createdCount, updatedCount, totalSynced } = syncProductsToOdooStep()
+    const { createdCount, updatedCount, totalSynced, errorCount, errors } = syncProductsToOdooStep()
 
     return new WorkflowResponse({
       syncedProducts: totalSynced,
       createdProducts: createdCount,
       updatedProducts: updatedCount,
+      errorCount,
+      errors,
     })
   }
 )
