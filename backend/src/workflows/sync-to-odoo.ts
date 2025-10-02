@@ -63,7 +63,14 @@ const getMedusaProductsStep = createStep(
 // Step 2: Transformar productos de Medusa a formato ODOO
 const transformProductsStep = createStep(
   "transform-products",
-  async ({ products }, { container }) => {
+  async (input, { container }) => {
+    const { products } = input as { products: any[] }
+    
+    if (!products || !Array.isArray(products)) {
+      console.error("❌ Error: products no es un array válido:", products)
+      return new StepResponse({ transformedProducts: [] })
+    }
+    
     const odooModuleService: OdooModuleService = container.resolve("ODOO")
 
     const transformedProducts = []
@@ -127,7 +134,19 @@ const transformProductsStep = createStep(
 // Step 3: Sincronizar productos con ODOO
 const syncProductsToOdooStep = createStep(
   "sync-products-to-odoo",
-  async ({ transformedProducts }, { container }) => {
+  async (input, { container }) => {
+    const { transformedProducts } = input as { transformedProducts: any[] }
+    
+    if (!transformedProducts || !Array.isArray(transformedProducts)) {
+      console.error("❌ Error: transformedProducts no es un array válido:", transformedProducts)
+      return new StepResponse({
+        createdCount: 0,
+        updatedCount: 0,
+        totalSynced: 0,
+        errorCount: 1,
+        errors: [{ product: "N/A", medusaId: "N/A", error: "No hay productos para sincronizar" }],
+      })
+    }
     const odooModuleService: OdooModuleService = container.resolve("ODOO")
 
     let createdCount = 0
