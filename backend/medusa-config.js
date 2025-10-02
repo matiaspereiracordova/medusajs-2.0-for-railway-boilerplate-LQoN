@@ -132,7 +132,18 @@ const medusaConfig = {
           },
         ],
       },
-    }] : [])
+    }] : []),
+    // Módulo personalizado ODOO
+    {
+      key: "ODOO",
+      resolve: require.resolve("./src/modules/odoo"),
+      options: {
+        url: process.env.ODOO_URL,
+        dbName: process.env.ODOO_DATABASE,
+        username: process.env.ODOO_USERNAME,
+        apiKey: process.env.ODOO_PASSWORD,
+      },
+    }
   ],
   plugins: [
   ...(MEILISEARCH_HOST && MEILISEARCH_ADMIN_KEY ? [{
@@ -156,17 +167,7 @@ const medusaConfig = {
           }
         }
       }
-    }] : []),
-    {
-      key: "ODOO",
-      resolve: "./src/modules/odoo",
-      options: {
-        url: process.env.ODOO_URL,
-        dbName: process.env.ODOO_DATABASE,
-        username: process.env.ODOO_USERNAME,
-        apiKey: process.env.ODOO_PASSWORD,
-      },
-    },
+    }] : [])
   ]
 };
 
