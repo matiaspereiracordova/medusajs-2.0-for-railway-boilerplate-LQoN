@@ -30,33 +30,49 @@ type SyncToOdooWorkflowOutput = {
 const getMedusaProductsStep = createStep(
   "get-medusa-products",
   async (input: SyncToOdooWorkflowInput, { container }) => {
-    const productModuleService: IProductModuleService = container.resolve(
-      ModuleRegistrationName.PRODUCT
-    )
+    try {
+      console.log("🔍 Resolviendo servicio de productos...")
+      const productModuleService: IProductModuleService = container.resolve(
+        ModuleRegistrationName.PRODUCT
+      )
 
-    const { productIds, limit = 10, offset = 0 } = input
+      console.log("📋 Parámetros de entrada:", input)
+      const { productIds, limit = 10, offset = 0 } = input
 
-    let products
-    if (productIds && productIds.length > 0) {
-      products = await Promise.all(
-        productIds.map((id) =>
-          productModuleService.retrieveProduct(id, {
-            relations: ["variants", "categories", "tags"],
-          })
+      let products
+      if (productIds && productIds.length > 0) {
+        console.log("🎯 Obteniendo productos específicos por IDs:", productIds)
+        products = await Promise.all(
+          productIds.map((id) =>
+            productModuleService.retrieveProduct(id, {
+              relations: ["variants", "categories", "tags"],
+            })
+          )
         )
-      )
-    } else {
-      products = await productModuleService.listProducts(
-        {},
-        {
-          relations: ["variants", "categories", "tags"],
-          take: limit,
-          skip: offset,
-        }
-      )
-    }
+      } else {
+        console.log(`📦 Obteniendo productos (limit: ${limit}, offset: ${offset})`)
+        products = await productModuleService.listProducts(
+          {},
+          {
+            relations: ["variants", "categories", "tags"],
+            take: limit,
+            skip: offset,
+          }
+        )
+      }
 
-    return new StepResponse({ products })
+      console.log(`✅ Productos obtenidos: ${products?.length || 0}`)
+      console.log("🔍 Primer producto:", products?.[0] ? {
+        id: products[0].id,
+        title: products[0].title,
+        variants: products[0].variants?.length || 0
+      } : "No hay productos")
+
+      return new StepResponse({ products })
+    } catch (error) {
+      console.error("❌ Error obteniendo productos de Medusa:", error)
+      return new StepResponse({ products: [] })
+    }
   }
 )
 
