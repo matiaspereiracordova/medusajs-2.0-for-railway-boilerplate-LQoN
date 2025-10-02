@@ -10,7 +10,7 @@ type Options = {
 export type OdooProduct = {
   id: number
   name: string
-  code?: string
+  default_code?: string
   list_price: number
   currency_id: [number, string]
   type: string
@@ -21,7 +21,7 @@ export type OdooProduct = {
   product_variant_ids: Array<{
     id: number
     name: string
-    code?: string
+    default_code?: string
     list_price: number
     currency_id: [number, string]
     product_template_variant_value_ids: Array<{
@@ -112,7 +112,7 @@ export default class OdooModuleService {
           fields: [
             "id",
             "name",
-            "code",
+            "default_code",
             "list_price",
             "currency_id",
             "type",
@@ -199,7 +199,7 @@ export default class OdooModuleService {
           fields: [
             "id",
             "name",
-            "code",
+            "default_code",
             "list_price",
             "currency_id",
             "type",
