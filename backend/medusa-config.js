@@ -156,7 +156,17 @@ const medusaConfig = {
           }
         }
       }
-    }] : [])
+    }] : []),
+    {
+      key: "ODOO",
+      resolve: "./src/modules/odoo",
+      options: {
+        url: process.env.ODOO_URL,
+        dbName: process.env.ODOO_DATABASE,
+        username: process.env.ODOO_USERNAME,
+        apiKey: process.env.ODOO_PASSWORD,
+      },
+    },
   ]
 };
 
