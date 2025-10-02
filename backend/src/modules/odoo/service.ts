@@ -43,8 +43,16 @@ export default class OdooModuleService {
 
   constructor({}, options: Options) {
     this.options = options
+    
+    console.log("🔧 Configuración del módulo ODOO:", {
+      url: options.url,
+      dbName: options.dbName,
+      username: options.username,
+      hasApiKey: !!options.apiKey
+    })
 
     this.client = new JSONRPCClient((jsonRPCRequest) => {
+      console.log("🌐 Intentando conectar a ODOO:", `${options.url}/jsonrpc`)
       return fetch(`${options.url}/jsonrpc`, {
         method: "POST",
         headers: {

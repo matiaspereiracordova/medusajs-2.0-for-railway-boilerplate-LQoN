@@ -138,10 +138,10 @@ const medusaConfig = {
       key: "ODOO",
       resolve: require.resolve("./src/modules/odoo"),
       options: {
-        url: process.env.ODOO_URL,
-        dbName: process.env.ODOO_DATABASE,
-        username: process.env.ODOO_USERNAME,
-        apiKey: process.env.ODOO_PASSWORD,
+        url: process.env.ODOO_URL || "https://odoo-production-340c.up.railway.app",
+        dbName: process.env.ODOO_DATABASE || "railway",
+        username: process.env.ODOO_USERNAME || "admin",
+        apiKey: process.env.ODOO_PASSWORD || "admin",
       },
     }
   ],
