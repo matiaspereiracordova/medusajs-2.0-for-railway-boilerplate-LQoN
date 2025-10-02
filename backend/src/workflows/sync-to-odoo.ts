@@ -111,17 +111,9 @@ const transformProductsStep = createStep(
           name: product.title,
           default_code: product.handle || `MEDUSA_${product.id}`,
           list_price: productPrice,
-          currency_id: 1, // ID de la moneda en ODOO (ajustar según configuración)
-          type: "product",
-          sale_ok: true,
-          purchase_ok: true,
           x_medusa_id: product.id, // Campo personalizado para almacenar ID de Medusa
           description: product.description || "",
-          // Campos adicionales para mejor integración
           active: product.status === "published",
-          categ_id: false, // Categoría por defecto, se puede mapear después
-          uom_id: 1, // Unidad de medida por defecto
-          uom_po_id: 1, // Unidad de medida de compra por defecto
         }
 
         transformedProducts.push({
