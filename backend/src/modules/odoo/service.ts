@@ -14,21 +14,8 @@ export type OdooProduct = {
   list_price: number
   currency_id: [number, string]
   type: string
-  product_template_variant_value_ids: Array<{
-    attribute_id: [number, string]
-    name: string
-  }>
-  product_variant_ids: Array<{
-    id: number
-    name: string
-    default_code?: string
-    list_price: number
-    currency_id: [number, string]
-    product_template_variant_value_ids: Array<{
-      attribute_id: [number, string]
-      name: string
-    }>
-  }>
+  active: boolean
+  description?: string
 }
 
 export type Pagination = {
@@ -116,8 +103,8 @@ export default class OdooModuleService {
             "list_price",
             "currency_id",
             "type",
-            "product_template_variant_value_ids",
-            "product_variant_ids",
+            "active",
+            "description",
           ],
           offset,
           limit,
@@ -203,8 +190,8 @@ export default class OdooModuleService {
             "list_price",
             "currency_id",
             "type",
-            "product_template_variant_value_ids",
-            "product_variant_ids",
+            "active",
+            "description",
           ],
         },
       ],
