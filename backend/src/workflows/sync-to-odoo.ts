@@ -122,11 +122,6 @@ const transformProductsStep = createStep(
           categ_id: false, // Categoría por defecto, se puede mapear después
           uom_id: 1, // Unidad de medida por defecto
           uom_po_id: 1, // Unidad de medida de compra por defecto
-          // Información de variantes si existe
-          ...(product.variants && product.variants.length > 1 && {
-            // Si hay múltiples variantes, crear como plantilla de producto
-            has_variants: true,
-          }),
         }
 
         transformedProducts.push({
