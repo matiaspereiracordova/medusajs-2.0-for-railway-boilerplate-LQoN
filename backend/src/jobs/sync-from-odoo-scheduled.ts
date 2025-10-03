@@ -84,11 +84,7 @@ export default async function syncFromOdooScheduledJob(container: MedusaContaine
           title: odooProduct.name,
           handle: generateValidHandle(odooProduct.name, odooProduct.id),
           description: odooProduct.description || "",
-          status: odooProduct.active ? "published" as const : "draft" as const,
-          metadata: {
-            odoo_id: odooProduct.id,
-            synced_from_odoo: true
-          }
+          status: odooProduct.active ? "published" as const : "draft" as const
         }
 
         const variantData = {

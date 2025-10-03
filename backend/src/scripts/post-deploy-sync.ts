@@ -26,12 +26,11 @@ export default async function postDeploySync(container: MedusaContainer) {
       return
     }
 
-    // Verificar si ya hay productos sincronizados
-    const existingProducts = await productModuleService.listProducts({
-      metadata: {
-        synced_from_odoo: true
-      }
-    })
+    // Verificar si ya hay productos sincronizados (buscar por handle que contenga 'product-')
+    const allProducts = await productModuleService.listProducts({})
+    const existingProducts = allProducts.filter(product => 
+      product.handle && product.handle.startsWith('product-')
+    )
 
     if (existingProducts.length > 0) {
       console.log(`ℹ️ Ya hay ${existingProducts.length} productos sincronizados, saltando sincronización automática`)
@@ -78,11 +77,7 @@ export default async function postDeploySync(container: MedusaContainer) {
           title: odooProduct.name,
           handle: generateValidHandle(odooProduct.name, odooProduct.id),
           description: odooProduct.description || "",
-          status: odooProduct.active ? "published" as const : "draft" as const,
-          metadata: {
-            odoo_id: odooProduct.id,
-            synced_from_odoo: true
-          }
+          status: odooProduct.active ? "published" as const : "draft" as const
         }
 
         const variantData = {
