@@ -105,6 +105,7 @@ export async function POST(
             .replace(/[^a-z0-9\s-]/g, '') // Remover caracteres especiales
             .replace(/\s+/g, '-') // Reemplazar espacios con guiones
             .replace(/-+/g, '-') // Remover guiones múltiples
+            .replace(/^-+|-+$/g, '') // Remover guiones al inicio y final
             .substring(0, 50); // Limitar longitud
           
           // Si el handle está vacío o es muy corto, usar ID como respaldo
