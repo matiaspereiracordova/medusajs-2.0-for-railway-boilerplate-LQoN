@@ -8,6 +8,30 @@ import { IProductModuleService } from "@medusajs/framework/types"
 import { ModuleRegistrationName } from "@medusajs/framework/utils"
 import OdooModuleService, { OdooProduct } from "../modules/odoo/service.js"
 
+// Función para convertir imagen URL a base64
+async function convertImageToBase64(imageUrl: string): Promise<string | null> {
+  try {
+    if (!imageUrl) return null
+    
+    console.log(`🖼️ Descargando imagen: ${imageUrl}`)
+    const response = await fetch(imageUrl)
+    
+    if (!response.ok) {
+      console.warn(`⚠️ No se pudo descargar la imagen: ${imageUrl} (${response.status})`)
+      return null
+    }
+    
+    const arrayBuffer = await response.arrayBuffer()
+    const base64 = Buffer.from(arrayBuffer).toString('base64')
+    
+    console.log(`✅ Imagen convertida a base64 (${base64.length} caracteres)`)
+    return base64
+  } catch (error) {
+    console.error(`❌ Error convirtiendo imagen a base64:`, error)
+    return null
+  }
+}
+
 type SyncToOdooWorkflowInput = {
   productIds?: string[]
   limit?: number
@@ -110,14 +134,14 @@ const transformProductsStep = createStep(
           }
         }
 
-        // Obtener la imagen principal del producto
-        let productImage = null
+        // Obtener la imagen principal del producto y convertirla a base64
+        let productImageBase64 = null
         if (product.images && product.images.length > 0) {
           // Usar la primera imagen disponible
-          productImage = product.images[0].url
+          productImageBase64 = await convertImageToBase64(product.images[0].url)
         } else if (product.thumbnail) {
           // Usar thumbnail si no hay imágenes
-          productImage = product.thumbnail
+          productImageBase64 = await convertImageToBase64(product.thumbnail)
         }
 
         const odooProductData = {
@@ -127,7 +151,7 @@ const transformProductsStep = createStep(
           x_medusa_id: product.id, // Campo personalizado para almacenar ID de Medusa
           description: product.description || "",
           active: product.status === "published",
-          image_1920: productImage, // Imagen principal del producto
+          image_1920: productImageBase64, // Imagen principal del producto en base64
         }
 
         transformedProducts.push({
@@ -137,7 +161,7 @@ const transformProductsStep = createStep(
           odooProductId: existingOdooProducts[0]?.id,
         })
 
-        console.log(`📦 Producto transformado: ${product.title} - Precio: $${productPrice} - Imagen: ${productImage ? 'Sí' : 'No'}`)
+        console.log(`📦 Producto transformado: ${product.title} - Precio: $${productPrice} - Imagen: ${productImageBase64 ? 'Sí (base64)' : 'No'}`)
       } catch (error) {
         console.error(`❌ Error transformando producto ${product.title}:`, error)
       }
