@@ -45,12 +45,35 @@ async function getProductPrice(
     console.log(`🔍 Buscando precios para variant: ${variantId}`)
     const allPrices = await pricingModuleService.listPrices()
     
-    // Filtrar precios por variant_id
+    console.log(`🔍 Total de precios en el sistema: ${allPrices.length}`)
+    
+    // Debug: mostrar estructura de los primeros precios
+    if (allPrices.length > 0) {
+      console.log(`🔍 Debug: Estructura del primer precio:`, Object.keys(allPrices[0]))
+      console.log(`🔍 Debug: Primer precio completo:`, allPrices[0])
+    }
+    
+    // Filtrar precios por variant_id - probar diferentes propiedades
     const variantPrices = allPrices.filter((price: any) => {
-      return price.variant_id === variantId || 
-             (Array.isArray(price.variant_id) && price.variant_id.includes(variantId)) ||
-             price.price_set_id === variantId ||
-             (price.price_set && price.price_set.variant_id === variantId)
+      const matches = 
+        price.variant_id === variantId || 
+        (Array.isArray(price.variant_id) && price.variant_id.includes(variantId)) ||
+        price.price_set_id === variantId ||
+        (price.price_set && price.price_set.variant_id === variantId) ||
+        price.id === variantId ||
+        (price.price_set && price.price_set.id === variantId)
+      
+      if (matches) {
+        console.log(`🔍 Precio encontrado para variant ${variantId}:`, {
+          id: price.id,
+          variant_id: price.variant_id,
+          price_set_id: price.price_set_id,
+          currency_code: price.currency_code,
+          amount: price.amount
+        })
+      }
+      
+      return matches
     })
     
     console.log(`💰 Precios encontrados para variant ${variantId}: ${variantPrices.length}`)
@@ -59,8 +82,9 @@ async function getProductPrice(
       // Priorizar CLP, luego USD, luego cualquier otra moneda
       const clpPrice = variantPrices.find((price: any) => price.currency_code === 'clp')
       const usdPrice = variantPrices.find((price: any) => price.currency_code === 'usd')
+      const eurPrice = variantPrices.find((price: any) => price.currency_code === 'eur')
       
-      const selectedPrice = clpPrice || usdPrice || variantPrices[0]
+      const selectedPrice = clpPrice || usdPrice || eurPrice || variantPrices[0]
       const amount = Number(selectedPrice.amount) || 0
       
       console.log(`💰 Precio encontrado (${selectedPrice.currency_code}): ${amount} centavos = $${amount / 100}`)
