@@ -97,10 +97,28 @@ export async function POST(
           }
         }
 
+        // Función para generar handle válido
+        const generateValidHandle = (name: string, id: number): string => {
+          // Convertir nombre a handle válido (solo letras, números, guiones)
+          let handle = name
+            .toLowerCase()
+            .replace(/[^a-z0-9\s-]/g, '') // Remover caracteres especiales
+            .replace(/\s+/g, '-') // Reemplazar espacios con guiones
+            .replace(/-+/g, '-') // Remover guiones múltiples
+            .substring(0, 50); // Limitar longitud
+          
+          // Si el handle está vacío o es muy corto, usar ID como respaldo
+          if (!handle || handle.length < 3) {
+            handle = `product-${id}`;
+          }
+          
+          return handle;
+        };
+
         // Preparar datos del producto para MedusaJS
         const productData = {
           title: odooProduct.name,
-          handle: odooProduct.default_code || `odoo_${odooProduct.id}`,
+          handle: generateValidHandle(odooProduct.name, odooProduct.id),
           description: odooProduct.description || "",
           status: odooProduct.active ? "published" as const : "draft" as const,
           // Campo personalizado para almacenar ID de Odoo
@@ -113,7 +131,7 @@ export async function POST(
         // Preparar datos de la variante
         const variantData = {
           title: odooProduct.name,
-          sku: odooProduct.default_code || `odoo_${odooProduct.id}`,
+          sku: odooProduct.default_code || `SKU-${odooProduct.id}`,
           prices: [{
             currency_code: "clp",
             amount: Math.round((odooProduct.list_price || 0) * 100) // Convertir a centavos
