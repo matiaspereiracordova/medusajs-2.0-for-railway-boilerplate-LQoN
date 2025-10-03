@@ -123,7 +123,12 @@ export default class OdooModuleService {
     await this.login()
 
     try {
-      console.log(`📤 Creando producto en Odoo:`, JSON.stringify(productData, null, 2))
+      // Crear una copia del objeto sin la imagen para el logging
+      const logData = { ...productData }
+      if (logData.image_1920) {
+        logData.image_1920 = `[Imagen base64: ${logData.image_1920.length} caracteres]`
+      }
+      console.log(`📤 Creando producto en Odoo:`, JSON.stringify(logData, null, 2))
       
       const result = await this.client.request("call", {
         service: "object",
@@ -150,7 +155,12 @@ export default class OdooModuleService {
     await this.login()
 
     try {
-      console.log(`📤 Actualizando producto en Odoo (ID: ${productId}):`, JSON.stringify(productData, null, 2))
+      // Crear una copia del objeto sin la imagen para el logging
+      const logData = { ...productData }
+      if (logData.image_1920) {
+        logData.image_1920 = `[Imagen base64: ${logData.image_1920.length} caracteres]`
+      }
+      console.log(`📤 Actualizando producto en Odoo (ID: ${productId}):`, JSON.stringify(logData, null, 2))
       
       const result = await this.client.request("call", {
         service: "object",

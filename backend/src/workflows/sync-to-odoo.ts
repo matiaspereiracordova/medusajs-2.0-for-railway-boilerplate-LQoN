@@ -294,7 +294,7 @@ const transformProductsStep = createStep(
           odooProductId: existingOdooProducts[0]?.id,
         })
 
-        console.log(`📦 Producto transformado: ${product.title} - Precio: $${productPrice} - Imagen: ${productImageBase64 ? 'Sí (base64)' : 'No'}`)
+        console.log(`📦 Producto transformado: ${product.title} - Precio: $${productPrice} - Imagen: ${productImageBase64 ? `Sí (${productImageBase64.length} caracteres base64)` : 'No'}`)
         
         // Debug adicional para el precio
         if (productPrice === 0) {
