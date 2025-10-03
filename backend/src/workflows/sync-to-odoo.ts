@@ -98,7 +98,7 @@ const getMedusaProductsStep = createStep(
         products = await Promise.all(
           productIds.map((id) =>
             productModuleService.retrieveProduct(id, {
-              relations: ["variants", "categories", "tags", "images"],
+              relations: ["variants", "variants.prices", "categories", "tags", "images"],
               // Intentar incluir contexto de región para calculated_price
               ...(region && { region_id: region.id })
             })
@@ -109,7 +109,7 @@ const getMedusaProductsStep = createStep(
         products = await productModuleService.listProducts(
           {},
           {
-            relations: ["variants", "categories", "tags", "images"],
+            relations: ["variants", "variants.prices", "categories", "tags", "images"],
             take: limit,
             skip: offset,
             // Intentar incluir contexto de región para calculated_price
@@ -142,8 +142,10 @@ const getMedusaProductsStep = createStep(
           if (products[0].variants[0].prices?.length > 0) {
             console.log("  - Precios disponibles:")
             products[0].variants[0].prices.forEach((price, index) => {
-              console.log(`    ${index + 1}. ${price.currency_code}: ${price.amount} centavos`)
+              console.log(`    ${index + 1}. ${price.currency_code}: ${price.amount} centavos ($${price.amount / 100})`)
             })
+          } else {
+            console.log("  - ⚠️ No se encontraron precios en el variant")
           }
         }
       }
