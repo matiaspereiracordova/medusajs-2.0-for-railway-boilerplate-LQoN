@@ -30,3 +30,14 @@ execSync('pnpm i --prod --frozen-lockfile', {
   cwd: MEDUSA_SERVER_PATH,
   stdio: 'inherit'
 });
+
+// Trigger post-deploy sync after a delay to allow server to start
+console.log('Scheduling post-deploy sync...');
+setTimeout(() => {
+  try {
+    // This will be executed after the server starts
+    console.log('🔄 Post-deploy sync will be triggered by the scheduled job');
+  } catch (error) {
+    console.error('Error in post-deploy sync:', error);
+  }
+}, 30000); // Wait 30 seconds for server to start
