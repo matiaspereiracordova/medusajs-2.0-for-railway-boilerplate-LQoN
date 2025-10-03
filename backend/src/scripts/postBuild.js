@@ -31,13 +31,14 @@ execSync('pnpm i --prod --frozen-lockfile', {
   stdio: 'inherit'
 });
 
-// Trigger post-deploy sync after a delay to allow server to start
-console.log('Scheduling post-deploy sync...');
+// Trigger post-deploy sync and cleanup after a delay to allow server to start
+console.log('Scheduling post-deploy sync and cleanup...');
 setTimeout(() => {
   try {
     // This will be executed after the server starts
-    console.log('🔄 Post-deploy sync will be triggered by the scheduled job');
+    console.log('🔄 Post-deploy sync and cleanup will be triggered by the scheduled jobs');
+    console.log('🧹 Duplicate cleanup will run automatically at 1:00 AM daily');
   } catch (error) {
-    console.error('Error in post-deploy sync:', error);
+    console.error('Error in post-deploy setup:', error);
   }
 }, 30000); // Wait 30 seconds for server to start

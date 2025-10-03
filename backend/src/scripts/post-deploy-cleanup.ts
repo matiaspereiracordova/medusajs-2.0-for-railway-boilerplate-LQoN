@@ -1,10 +1,14 @@
+import { MedusaContainer } from "@medusajs/framework/types"
 import { IProductModuleService } from "@medusajs/framework/types"
 import { ModuleRegistrationName } from "@medusajs/framework/utils"
 
-async function cleanupDuplicateProducts(container: any) {
-  console.log("🧹 Iniciando limpieza de productos duplicados...")
+async function postDeployCleanup(container: MedusaContainer) {
+  console.log("🧹 Ejecutando limpieza de duplicados después del deploy...")
 
   try {
+    // Esperar un poco para que el servidor esté completamente iniciado
+    await new Promise(resolve => setTimeout(resolve, 10000))
+
     // Resolver servicio de productos
     const productModuleService: IProductModuleService = container.resolve(
       ModuleRegistrationName.PRODUCT
@@ -44,9 +48,11 @@ async function cleanupDuplicateProducts(container: any) {
 
     let deletedCount = 0
 
-    // Procesar cada grupo de duplicados
-    for (const { handle, products } of duplicates) {
-      console.log(`\n🔄 Procesando duplicados para handle: ${handle}`)
+    // Procesar cada grupo de duplicados (máximo 5 por ejecución)
+    const duplicatesToProcess = duplicates.slice(0, 5)
+    
+    for (const { handle, products } of duplicatesToProcess) {
+      console.log(`🔄 Procesando duplicados para handle: ${handle}`)
       
       // Ordenar por fecha de creación (más reciente primero)
       const sortedProducts = products.sort((a, b) => {
@@ -76,21 +82,13 @@ async function cleanupDuplicateProducts(container: any) {
       }
     }
 
-    console.log(`\n🎉 Limpieza completada:`)
+    console.log(`🎉 Limpieza post-deploy completada:`)
     console.log(`   🗑️ Productos eliminados: ${deletedCount}`)
-    console.log(`   ✅ Productos únicos mantenidos`)
+    console.log(`   ⏭️ Duplicados restantes para próxima ejecución: ${duplicates.length - duplicatesToProcess.length}`)
 
   } catch (error) {
-    console.error("❌ Error en limpieza de duplicados:", error)
+    console.error("❌ Error en limpieza post-deploy:", error)
   }
 }
 
-// Ejecutar si se llama directamente
-if (require.main === module) {
-  console.log("⚠️ Este script debe ejecutarse desde un job o API endpoint")
-  console.log("💡 Usa el endpoint: POST /admin/cleanup-duplicates")
-  console.log("💡 O el job automático: cleanup-duplicates-scheduled")
-  process.exit(1)
-}
-
-export default cleanupDuplicateProducts
+export default postDeployCleanup
