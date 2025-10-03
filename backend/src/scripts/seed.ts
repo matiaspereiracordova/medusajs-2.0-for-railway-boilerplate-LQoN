@@ -34,6 +34,17 @@ export default async function seedDemoData({ container }: ExecArgs) {
 
   logger.info("Seeding Chilean pet store data...");
   const [store] = await storeModuleService.listStores();
+  
+  // Verificar si ya existen productos
+  const existingProducts = await query.graph({
+    entity: "product",
+    fields: ["id", "title"],
+  });
+  
+  if (existingProducts.length > 0) {
+    logger.info(`Found ${existingProducts.length} existing products, skipping product creation`);
+    return;
+  }
   let defaultSalesChannel = await salesChannelModuleService.listSalesChannels({
     name: "Default Sales Channel",
   });
@@ -574,7 +585,7 @@ export default async function seedDemoData({ container }: ExecArgs) {
 
   logger.info("Seeding Chilean pet products...");
 
-  await createProductsWorkflow(container).run({
+  const { result: productResult } = await createProductsWorkflow(container).run({
     input: {
       products: [
         // Producto ejemplo: Comida Seca para Perros
@@ -946,6 +957,9 @@ export default async function seedDemoData({ container }: ExecArgs) {
       inventory_levels: inventoryLevels,
     },
   });
+
+  logger.info(`✅ Successfully created ${productResult.length} products for Chile`);
+  logger.info("🎉 Chilean pet store setup completed!");
 
   logger.info("Finished seeding inventory levels data.");
   logger.info("🇨🇱 Chilean pet store configuration completed successfully!");
