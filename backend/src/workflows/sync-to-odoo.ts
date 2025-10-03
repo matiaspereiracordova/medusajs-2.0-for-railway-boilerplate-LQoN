@@ -94,6 +94,26 @@ const getMedusaProductsStep = createStep(
         thumbnail: products[0].thumbnail ? 'Sí' : 'No',
         price: products[0].variants?.[0]?.prices?.[0]?.amount ? (products[0].variants[0].prices[0].amount / 100) : 'No disponible'
       } : "No hay productos")
+      
+      // Debug detallado del primer producto
+      if (products?.[0]) {
+        console.log("🔍 Debug detallado del primer producto:")
+        console.log("  - Variants:", products[0].variants?.length || 0)
+        if (products[0].variants?.[0]) {
+          console.log("  - Primer variant:", {
+            id: products[0].variants[0].id,
+            title: products[0].variants[0].title,
+            sku: products[0].variants[0].sku,
+            prices: products[0].variants[0].prices?.length || 0
+          })
+          if (products[0].variants[0].prices?.length > 0) {
+            console.log("  - Precios disponibles:")
+            products[0].variants[0].prices.forEach((price, index) => {
+              console.log(`    ${index + 1}. ${price.currency_code}: ${price.amount} centavos`)
+            })
+          }
+        }
+      }
 
       return new StepResponse({ products })
     } catch (error) {
@@ -130,7 +150,21 @@ const transformProductsStep = createStep(
         if (product.variants && product.variants.length > 0) {
           const firstVariant = product.variants[0]
           if (firstVariant.prices && firstVariant.prices.length > 0) {
-            productPrice = firstVariant.prices[0].amount / 100 // Convertir de centavos
+            // Buscar precio en CLP (Chilean Peso) primero, luego USD como fallback
+            const clpPrice = firstVariant.prices.find(price => price.currency_code === 'clp')
+            const usdPrice = firstVariant.prices.find(price => price.currency_code === 'usd')
+            
+            if (clpPrice) {
+              productPrice = clpPrice.amount / 100 // Convertir de centavos
+              console.log(`💰 Precio CLP encontrado: ${clpPrice.amount} centavos = $${productPrice}`)
+            } else if (usdPrice) {
+              productPrice = usdPrice.amount / 100 // Convertir de centavos
+              console.log(`💰 Precio USD encontrado: ${usdPrice.amount} centavos = $${productPrice}`)
+            } else {
+              // Si no hay CLP ni USD, usar el primer precio disponible
+              productPrice = firstVariant.prices[0].amount / 100
+              console.log(`💰 Usando primer precio disponible: ${firstVariant.prices[0].amount} centavos = $${productPrice}`)
+            }
           }
         }
 
@@ -162,6 +196,20 @@ const transformProductsStep = createStep(
         })
 
         console.log(`📦 Producto transformado: ${product.title} - Precio: $${productPrice} - Imagen: ${productImageBase64 ? 'Sí (base64)' : 'No'}`)
+        
+        // Debug adicional para el precio
+        if (productPrice === 0) {
+          console.log(`⚠️ Precio es 0 para ${product.title}. Debug:`)
+          console.log(`  - Variants: ${product.variants?.length || 0}`)
+          if (product.variants?.[0]) {
+            console.log(`  - Primer variant prices: ${product.variants[0].prices?.length || 0}`)
+            if (product.variants[0].prices?.length > 0) {
+              product.variants[0].prices.forEach((price, index) => {
+                console.log(`    ${index + 1}. ${price.currency_code}: ${price.amount} centavos`)
+              })
+            }
+          }
+        }
       } catch (error) {
         console.error(`❌ Error transformando producto ${product.title}:`, error)
       }
