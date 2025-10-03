@@ -40,7 +40,7 @@ const getAllPricesStep = createStep(
         console.log("Título:", price.title)
         console.log("Currency Code:", price.currency_code)
         console.log("Amount:", price.amount)
-        console.log("Raw Amount:", price.raw_amount)
+        console.log("Raw Amount:", (price as any).raw_amount)
         console.log("Price Set ID:", (price as any).price_set_id)
         console.log("Price Set:", (price as any).price_set)
         console.log("Price List ID:", (price as any).price_list_id)

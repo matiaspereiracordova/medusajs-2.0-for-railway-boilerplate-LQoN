@@ -26,7 +26,7 @@ export async function POST(
       message: "Debug de precios completado",
       data: {
         totalPrices: result.result.totalPrices,
-        totalVariants: result.result.totalVariants,
+        totalVariants: (result.result as any).totalVariants,
         variantsWithPrices: result.result.variantsWithPrices,
         variantPrices: result.result.variantPrices,
         timestamp: new Date().toISOString(),
