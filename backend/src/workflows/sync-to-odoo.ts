@@ -45,7 +45,7 @@ const getMedusaProductsStep = createStep(
         products = await Promise.all(
           productIds.map((id) =>
             productModuleService.retrieveProduct(id, {
-              relations: ["variants", "categories", "tags"],
+              relations: ["variants", "categories", "tags", "images"],
             })
           )
         )
@@ -54,7 +54,7 @@ const getMedusaProductsStep = createStep(
         products = await productModuleService.listProducts(
           {},
           {
-            relations: ["variants", "categories", "tags"],
+            relations: ["variants", "categories", "tags", "images"],
             take: limit,
             skip: offset,
           }
@@ -65,7 +65,10 @@ const getMedusaProductsStep = createStep(
       console.log("🔍 Primer producto:", products?.[0] ? {
         id: products[0].id,
         title: products[0].title,
-        variants: products[0].variants?.length || 0
+        variants: products[0].variants?.length || 0,
+        images: products[0].images?.length || 0,
+        thumbnail: products[0].thumbnail ? 'Sí' : 'No',
+        price: products[0].variants?.[0]?.prices?.[0]?.amount ? (products[0].variants[0].prices[0].amount / 100) : 'No disponible'
       } : "No hay productos")
 
       return new StepResponse({ products })
@@ -107,6 +110,16 @@ const transformProductsStep = createStep(
           }
         }
 
+        // Obtener la imagen principal del producto
+        let productImage = null
+        if (product.images && product.images.length > 0) {
+          // Usar la primera imagen disponible
+          productImage = product.images[0].url
+        } else if (product.thumbnail) {
+          // Usar thumbnail si no hay imágenes
+          productImage = product.thumbnail
+        }
+
         const odooProductData = {
           name: product.title,
           default_code: product.handle || `MEDUSA_${product.id}`,
@@ -114,6 +127,7 @@ const transformProductsStep = createStep(
           x_medusa_id: product.id, // Campo personalizado para almacenar ID de Medusa
           description: product.description || "",
           active: product.status === "published",
+          image_1920: productImage, // Imagen principal del producto
         }
 
         transformedProducts.push({
@@ -123,7 +137,7 @@ const transformProductsStep = createStep(
           odooProductId: existingOdooProducts[0]?.id,
         })
 
-        console.log(`📦 Producto transformado: ${product.title}`)
+        console.log(`📦 Producto transformado: ${product.title} - Precio: $${productPrice} - Imagen: ${productImage ? 'Sí' : 'No'}`)
       } catch (error) {
         console.error(`❌ Error transformando producto ${product.title}:`, error)
       }

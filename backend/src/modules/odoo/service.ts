@@ -16,6 +16,9 @@ export type OdooProduct = {
   type: string
   active: boolean
   description?: string
+  image_1920?: string
+  image_128?: string
+  image_256?: string
 }
 
 export type Pagination = {
@@ -105,6 +108,9 @@ export default class OdooModuleService {
             "type",
             "active",
             "description",
+            "image_1920",
+            "image_128",
+            "image_256",
           ],
           offset,
           limit,
@@ -192,6 +198,9 @@ export default class OdooModuleService {
             "type",
             "active",
             "description",
+            "image_1920",
+            "image_128",
+            "image_256",
           ],
         },
       ],
