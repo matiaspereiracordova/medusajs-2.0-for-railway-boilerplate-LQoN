@@ -4,7 +4,7 @@ import {
   StepResponse,
   WorkflowResponse,
 } from "@medusajs/workflows-sdk"
-import { IProductModuleService } from "@medusajs/framework/types"
+import { IProductModuleService, IRegionModuleService } from "@medusajs/framework/types"
 import { ModuleRegistrationName } from "@medusajs/framework/utils"
 import OdooModuleService, { OdooProduct } from "../modules/odoo/service.js"
 
@@ -38,6 +38,32 @@ type SyncToOdooWorkflowInput = {
   offset?: number
 }
 
+// Step 0: Obtener región por defecto
+const getDefaultRegionStep = createStep(
+  "get-default-region",
+  async (input: SyncToOdooWorkflowInput, { container }) => {
+    try {
+      console.log("🌍 Resolviendo servicio de regiones...")
+      const regionModuleService: IRegionModuleService = container.resolve(
+        ModuleRegistrationName.REGION
+      )
+
+      // Buscar región de Chile (CLP)
+      const regions = await regionModuleService.listRegions({
+        currency_code: "clp"
+      })
+
+      const chileRegion = regions?.[0]
+      console.log(`🌍 Región encontrada: ${chileRegion?.name || 'No encontrada'} (${chileRegion?.currency_code || 'N/A'})`)
+
+      return new StepResponse({ region: chileRegion })
+    } catch (error) {
+      console.error("❌ Error obteniendo región:", error)
+      return new StepResponse({ region: null })
+    }
+  }
+)
+
 type SyncToOdooWorkflowOutput = {
   syncedProducts: number
   createdProducts: number
@@ -53,15 +79,18 @@ type SyncToOdooWorkflowOutput = {
 // Step 1: Obtener productos de Medusa
 const getMedusaProductsStep = createStep(
   "get-medusa-products",
-  async (input: SyncToOdooWorkflowInput, { container }) => {
+  async (input: { input: SyncToOdooWorkflowInput, region: any }, { container }) => {
     try {
       console.log("🔍 Resolviendo servicio de productos...")
       const productModuleService: IProductModuleService = container.resolve(
         ModuleRegistrationName.PRODUCT
       )
 
-      console.log("📋 Parámetros de entrada:", input)
-      const { productIds, limit = 10, offset = 0 } = input
+      const { input: workflowInput, region } = input
+      console.log("📋 Parámetros de entrada:", workflowInput)
+      console.log("🌍 Región para precios:", region?.name || 'No disponible')
+      
+      const { productIds, limit = 10, offset = 0 } = workflowInput
 
       let products
       if (productIds && productIds.length > 0) {
@@ -70,6 +99,8 @@ const getMedusaProductsStep = createStep(
           productIds.map((id) =>
             productModuleService.retrieveProduct(id, {
               relations: ["variants", "categories", "tags", "images"],
+              // Intentar incluir contexto de región para calculated_price
+              ...(region && { region_id: region.id })
             })
           )
         )
@@ -81,6 +112,8 @@ const getMedusaProductsStep = createStep(
             relations: ["variants", "categories", "tags", "images"],
             take: limit,
             skip: offset,
+            // Intentar incluir contexto de región para calculated_price
+            ...(region && { region_id: region.id })
           }
         )
       }
@@ -149,7 +182,24 @@ const transformProductsStep = createStep(
         let productPrice = 0
         if (product.variants && product.variants.length > 0) {
           const firstVariant = product.variants[0]
-          if (firstVariant.prices && firstVariant.prices.length > 0) {
+          
+          // Debug: mostrar estructura completa del variant
+          console.log(`🔍 Debug variant para ${product.title}:`, {
+            id: firstVariant.id,
+            title: firstVariant.title,
+            sku: firstVariant.sku,
+            hasPrices: !!firstVariant.prices,
+            pricesLength: firstVariant.prices?.length || 0,
+            hasCalculatedPrice: !!firstVariant.calculated_price,
+            calculatedPrice: firstVariant.calculated_price
+          })
+          
+          // Intentar usar calculated_price primero (MedusaJS 2.0 approach)
+          if (firstVariant.calculated_price?.calculated_amount) {
+            productPrice = firstVariant.calculated_price.calculated_amount / 100
+            console.log(`💰 Precio calculado encontrado: ${firstVariant.calculated_price.calculated_amount} centavos = $${productPrice}`)
+          } else if (firstVariant.prices && firstVariant.prices.length > 0) {
+            // Fallback a prices array
             // Buscar precio en CLP (Chilean Peso) primero, luego USD como fallback
             const clpPrice = firstVariant.prices.find(price => price.currency_code === 'clp')
             const usdPrice = firstVariant.prices.find(price => price.currency_code === 'usd')
@@ -299,7 +349,9 @@ const syncProductsToOdooStep = createStep(
 const syncToOdooWorkflow = createWorkflow(
   "sync-to-odoo",
   function (input) {
-    const { products } = getMedusaProductsStep(input)
+    const { region } = getDefaultRegionStep(input)
+    // @ts-ignore - MedusaJS workflow steps require input
+    const { products } = getMedusaProductsStep({ input, region })
     // @ts-ignore - MedusaJS workflow steps require input
     const { transformedProducts } = transformProductsStep({ products })
     // @ts-ignore - MedusaJS workflow steps require input
