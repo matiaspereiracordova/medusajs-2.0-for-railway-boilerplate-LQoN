@@ -181,10 +181,13 @@ const debugPricesWorkflow = createWorkflow(
     const { products } = getProductsStep(input)
     const { priceSetToVariantMap, totalPrices, totalVariants, variantsWithPrices } = mapPricesToVariantsStep({ allPrices, products })
 
+    // Asegurar que products es un array antes de usar flatMap
+    const productsArray = Array.isArray(products) ? products : []
+    
     return new WorkflowResponse({
       totalPrices,
       prices: allPrices,
-      productVariants: products.flatMap(p => p.variants || []),
+      productVariants: productsArray.flatMap(p => p.variants || []),
       variantPrices: priceSetToVariantMap,
       variantsWithPrices
     })
