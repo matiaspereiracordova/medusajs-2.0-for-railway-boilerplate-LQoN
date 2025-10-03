@@ -128,10 +128,13 @@ const mapPricesToVariantsStep = createStep(
 
     console.log("\n🔍 Intentando mapear precios con variantes...")
 
+    // Asegurar que products es un array
+    const productsArray = Array.isArray(products) ? products : []
+    
     // Crear un mapa de price_set_id a variant_id
     const priceSetToVariantMap = new Map()
     
-    products.forEach(product => {
+    productsArray.forEach(product => {
       if (product.variants) {
         product.variants.forEach(variant => {
           // Buscar precios que tengan el mismo price_set_id
@@ -157,14 +160,14 @@ const mapPricesToVariantsStep = createStep(
     // Mostrar resumen
     console.log(`\n📊 Resumen de mapeo:`)
     console.log(`- Total de precios: ${allPrices.length}`)
-    console.log(`- Total de productos: ${products.length}`)
-    console.log(`- Total de variantes: ${products.reduce((acc, p) => acc + (p.variants?.length || 0), 0)}`)
+    console.log(`- Total de productos: ${productsArray.length}`)
+    console.log(`- Total de variantes: ${productsArray.reduce((acc, p) => acc + (p.variants?.length || 0), 0)}`)
     console.log(`- Variantes con precios: ${priceSetToVariantMap.size}`)
 
     return new StepResponse({ 
       priceSetToVariantMap: Array.from(priceSetToVariantMap.entries()),
       totalPrices: allPrices.length,
-      totalVariants: products.reduce((acc, p) => acc + (p.variants?.length || 0), 0),
+      totalVariants: productsArray.reduce((acc, p) => acc + (p.variants?.length || 0), 0),
       variantsWithPrices: priceSetToVariantMap.size
     })
   }
