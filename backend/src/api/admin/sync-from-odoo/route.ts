@@ -10,7 +10,8 @@ export async function POST(
   try {
     console.log("🔄 Iniciando sincronización desde Odoo hacia MedusaJS...");
     
-    const { product_ids, limit = 10, offset = 0, include_demo = false } = req.body;
+    const body = req.body as any;
+    const { product_ids, limit = 10, offset = 0, include_demo = false } = body || {};
     
     // Obtener productos de Odoo
     let domain: any[] = [];
@@ -101,7 +102,7 @@ export async function POST(
           title: odooProduct.name,
           handle: odooProduct.default_code || `odoo_${odooProduct.id}`,
           description: odooProduct.description || "",
-          status: odooProduct.active ? "published" : "draft",
+          status: odooProduct.active ? "published" as const : "draft" as const,
           // Campo personalizado para almacenar ID de Odoo
           metadata: {
             odoo_id: odooProduct.id,
@@ -122,24 +123,23 @@ export async function POST(
         if (existingProduct) {
           // Actualizar producto existente
           console.log(`🔄 Actualizando producto existente: ${productData.title}`);
-          await productModuleService.updateProducts([{
-            id: existingProduct.id,
+          await productModuleService.updateProducts(existingProduct.id, {
             ...productData
-          }]);
+          });
           updatedCount++;
         } else {
           // Crear nuevo producto
           console.log(`➕ Creando nuevo producto: ${productData.title}`);
-          const newProduct = await productModuleService.createProducts([{
+          const newProduct = await productModuleService.createProducts({
             ...productData,
             variants: [variantData]
-          }]);
+          });
 
           // Actualizar Odoo con el ID de MedusaJS
-          if (newProduct && newProduct.length > 0) {
+          if (newProduct) {
             await odooClient.create("product.template", {
               id: odooProduct.id,
-              x_medusa_id: newProduct[0].id
+              x_medusa_id: newProduct.id
             });
           }
           createdCount++;

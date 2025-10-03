@@ -15,8 +15,7 @@ export async function GET(
       "product.template",
       [["x_medusa_id", "=", false]], // Solo productos sin x_medusa_id
       ["id", "name", "list_price", "default_code", "description", "active", "image_1920"],
-      parseInt(limit as string) || 20,
-      parseInt(offset as string) || 0
+      parseInt(limit as string) || 20
     );
 
     console.log(`🎭 Productos de demostración encontrados: ${demoProducts.length}`);
