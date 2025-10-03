@@ -32,24 +32,40 @@ async function convertImageToBase64(imageUrl: string): Promise<string | null> {
   }
 }
 
-// Función para obtener precios usando el módulo de precios
-async function getVariantPricesFromPricingModule(pricingModuleService: IPricingModuleService, variantId: string) {
+// Función para obtener precios usando el store API
+async function getVariantPricesFromStore(variantId: string, regionId?: string) {
   try {
-    console.log(`💰 Obteniendo precios desde módulo de precios para variant: ${variantId}`)
+    console.log(`💰 Obteniendo precios desde store API para variant: ${variantId}`)
     
-    // Obtener todos los precios y filtrar por variant
-    const allPrices = await pricingModuleService.listPrices()
-    const variantPrices = allPrices.filter(price => (price as any).variant_id === variantId)
+    // Usar el store API para obtener precios calculados
+    const response = await fetch(`${process.env.BACKEND_URL || 'http://localhost:9000'}/store/products?region_id=${regionId}&fields=*variants.calculated_price`)
     
-    console.log(`💰 Precios encontrados: ${variantPrices.length}`)
-    variantPrices.forEach((price, index) => {
-      const amount = Number(price.amount) || 0
-      console.log(`  ${index + 1}. ${price.currency_code}: ${amount} centavos ($${amount / 100})`)
-    })
+    if (!response.ok) {
+      console.warn(`⚠️ Error obteniendo productos desde store API: ${response.status}`)
+      return []
+    }
     
-    return variantPrices
+    const data = await response.json()
+    const products = data.products || []
+    
+    // Buscar el variant específico en los productos
+    for (const product of products) {
+      if (product.variants) {
+        const variant = product.variants.find((v: any) => v.id === variantId)
+        if (variant && variant.calculated_price) {
+          console.log(`💰 Precio calculado encontrado: ${variant.calculated_price.calculated_amount} centavos`)
+          return [{
+            currency_code: variant.calculated_price.currency_code,
+            amount: variant.calculated_price.calculated_amount
+          }]
+        }
+      }
+    }
+    
+    console.log(`⚠️ No se encontró precio calculado para variant ${variantId}`)
+    return []
   } catch (error) {
-    console.error(`❌ Error obteniendo precios desde módulo de precios para variant ${variantId}:`, error)
+    console.error(`❌ Error obteniendo precios desde store API para variant ${variantId}:`, error)
     return []
   }
 }
@@ -224,28 +240,15 @@ const transformProductsStep = createStep(
             productPrice = firstVariant.calculated_price.calculated_amount / 100
             console.log(`💰 Precio calculado encontrado: ${firstVariant.calculated_price.calculated_amount} centavos = $${productPrice}`)
           } else {
-            // Usar el módulo de precios para obtener precios
-            const variantPrices = await getVariantPricesFromPricingModule(pricingModuleService, firstVariant.id)
+            // Usar el store API para obtener precios calculados
+            const variantPrices = await getVariantPricesFromStore(firstVariant.id, region?.id)
             
             if (variantPrices.length > 0) {
-              // Buscar precio en CLP (Chilean Peso) primero, luego USD como fallback
-              const clpPrice = variantPrices.find(price => price.currency_code === 'clp')
-              const usdPrice = variantPrices.find(price => price.currency_code === 'usd')
-              
-              if (clpPrice) {
-                const amount = Number(clpPrice.amount) || 0
-                productPrice = amount / 100 // Convertir de centavos
-                console.log(`💰 Precio CLP encontrado: ${amount} centavos = $${productPrice}`)
-              } else if (usdPrice) {
-                const amount = Number(usdPrice.amount) || 0
-                productPrice = amount / 100 // Convertir de centavos
-                console.log(`💰 Precio USD encontrado: ${amount} centavos = $${productPrice}`)
-              } else {
-                // Si no hay CLP ni USD, usar el primer precio disponible
-                const amount = Number(variantPrices[0].amount) || 0
-                productPrice = amount / 100
-                console.log(`💰 Usando primer precio disponible: ${amount} centavos = $${productPrice}`)
-              }
+              // Usar el precio calculado del store API
+              const price = variantPrices[0]
+              const amount = Number(price.amount) || 0
+              productPrice = amount / 100 // Convertir de centavos
+              console.log(`💰 Precio desde store API: ${amount} centavos = $${productPrice} (${price.currency_code})`)
             } else {
               console.log(`⚠️ No se encontraron precios para variant ${firstVariant.id}`)
             }
