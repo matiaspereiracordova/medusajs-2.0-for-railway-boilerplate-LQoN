@@ -130,7 +130,7 @@ const getVariantPricesAdminWorkflow = createWorkflow(
       variantId: result.variantId,
       prices: result.prices,
       success: result.success,
-      error: result.error
+      error: (result as any).error
     })
   }
 )
