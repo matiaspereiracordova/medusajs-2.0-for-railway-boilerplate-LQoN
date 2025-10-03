@@ -32,37 +32,75 @@ async function convertImageToBase64(imageUrl: string): Promise<string | null> {
   }
 }
 
-// Función para obtener precios usando el módulo de precios (enfoque correcto según documentación)
-async function getVariantPricesFromPricingModule(pricingModuleService: IPricingModuleService, variantId: string) {
+// Función mejorada para obtener precios usando el módulo de precios
+async function getProductPrice(
+  pricingModuleService: IPricingModuleService,
+  variantId: string,
+  regionId?: string
+): Promise<number> {
   try {
-    console.log(`💰 Obteniendo precios desde módulo de precios para variant: ${variantId}`)
+    console.log(`💰 Obteniendo precios para variant: ${variantId}${regionId ? ` en región: ${regionId}` : ''}`)
     
-    // Obtener todos los precios
+    // Método 1: Obtener todos los precios y filtrar por variant_id
+    console.log(`🔍 Buscando precios para variant: ${variantId}`)
     const allPrices = await pricingModuleService.listPrices()
     
-    // Debug: mostrar estructura de los primeros precios
-    console.log(`🔍 Debug: Total de precios encontrados: ${allPrices.length}`)
-    if (allPrices.length > 0) {
-      console.log(`🔍 Debug: Estructura del primer precio:`, Object.keys(allPrices[0]))
-      console.log(`🔍 Debug: Primer precio completo:`, allPrices[0])
-    }
-    
-    // Filtrar precios por variant_id (usando diferentes posibles propiedades)
-    const variantPrices = allPrices.filter(price => {
-      const priceObj = price as any
-      return priceObj.variant_id === variantId || 
-             (Array.isArray(priceObj.variant_id) && priceObj.variant_id.includes(variantId)) ||
-             priceObj.price_set_id === variantId ||
-             (priceObj.price_set && priceObj.price_set.variant_id === variantId)
+    // Filtrar precios por variant_id
+    const variantPrices = allPrices.filter((price: any) => {
+      return price.variant_id === variantId || 
+             (Array.isArray(price.variant_id) && price.variant_id.includes(variantId)) ||
+             price.price_set_id === variantId ||
+             (price.price_set && price.price_set.variant_id === variantId)
     })
     
     console.log(`💰 Precios encontrados para variant ${variantId}: ${variantPrices.length}`)
-    variantPrices.forEach((price, index) => {
-      const amount = Number(price.amount) || 0
-      console.log(`  ${index + 1}. ${price.currency_code}: ${amount} centavos ($${amount / 100})`)
+    
+    if (variantPrices.length > 0) {
+      // Priorizar CLP, luego USD, luego cualquier otra moneda
+      const clpPrice = variantPrices.find((price: any) => price.currency_code === 'clp')
+      const usdPrice = variantPrices.find((price: any) => price.currency_code === 'usd')
+      
+      const selectedPrice = clpPrice || usdPrice || variantPrices[0]
+      const amount = Number(selectedPrice.amount) || 0
+      
+      console.log(`💰 Precio encontrado (${selectedPrice.currency_code}): ${amount} centavos = $${amount / 100}`)
+      return amount / 100
+    }
+    
+    console.log(`⚠️ No se encontraron precios para variant ${variantId}`)
+    return 0
+  } catch (error) {
+    console.error(`❌ Error obteniendo precio para variant ${variantId}:`, error)
+    return 0
+  }
+}
+
+// Función para obtener precios usando el módulo de precios (versión mejorada)
+async function getVariantPricesFromPricingModule(pricingModuleService: IPricingModuleService, variantId: string, regionId?: string) {
+  try {
+    console.log(`💰 Obteniendo precios desde módulo de precios para variant: ${variantId}`)
+    
+    // Obtener todos los precios y filtrar
+    const allPrices = await pricingModuleService.listPrices()
+    
+    // Filtrar precios por variant_id
+    const prices = allPrices.filter((price: any) => {
+      return price.variant_id === variantId || 
+             (Array.isArray(price.variant_id) && price.variant_id.includes(variantId)) ||
+             price.price_set_id === variantId ||
+             (price.price_set && price.price_set.variant_id === variantId)
     })
     
-    return variantPrices
+    console.log(`💰 Precios encontrados para variant ${variantId}: ${prices.length}`)
+    
+    if (prices.length > 0) {
+      prices.forEach((price: any, index: number) => {
+        const amount = Number(price.amount) || 0
+        console.log(`  ${index + 1}. ${price.currency_code}: ${amount} centavos ($${amount / 100})`)
+      })
+    }
+    
+    return prices
   } catch (error) {
     console.error(`❌ Error obteniendo precios desde módulo de precios para variant ${variantId}:`, error)
     return []
@@ -220,13 +258,12 @@ const transformProductsStep = createStep(
           product.id
         )
 
-        // Obtener el precio del primer variant disponible
+        // Obtener el precio del primer variant disponible usando la función mejorada
         let productPrice = 0
         if (product.variants && product.variants.length > 0) {
           const firstVariant = product.variants[0]
           
-          // Debug: mostrar estructura completa del variant
-          console.log(`🔍 Debug variant para ${product.title}:`, {
+          console.log(`🔍 Procesando variant para ${product.title}:`, {
             id: firstVariant.id,
             title: firstVariant.title,
             sku: firstVariant.sku,
@@ -234,36 +271,17 @@ const transformProductsStep = createStep(
             calculatedPrice: firstVariant.calculated_price
           })
           
-          // Intentar usar calculated_price primero (MedusaJS 2.0 approach)
+          // Intentar usar calculated_price primero (si está disponible)
           if (firstVariant.calculated_price?.calculated_amount) {
             productPrice = firstVariant.calculated_price.calculated_amount / 100
             console.log(`💰 Precio calculado encontrado: ${firstVariant.calculated_price.calculated_amount} centavos = $${productPrice}`)
           } else {
-            // Usar el módulo de precios para obtener precios
-            const variantPrices = await getVariantPricesFromPricingModule(pricingModuleService, firstVariant.id)
-            
-            if (variantPrices.length > 0) {
-              // Buscar precio en CLP (Chilean Peso) primero, luego USD como fallback
-              const clpPrice = variantPrices.find(price => price.currency_code === 'clp')
-              const usdPrice = variantPrices.find(price => price.currency_code === 'usd')
-              
-              if (clpPrice) {
-                const amount = Number(clpPrice.amount) || 0
-                productPrice = amount / 100 // Convertir de centavos
-                console.log(`💰 Precio CLP encontrado: ${amount} centavos = $${productPrice}`)
-              } else if (usdPrice) {
-                const amount = Number(usdPrice.amount) || 0
-                productPrice = amount / 100 // Convertir de centavos
-                console.log(`💰 Precio USD encontrado: ${amount} centavos = $${productPrice}`)
-              } else {
-                // Si no hay CLP ni USD, usar el primer precio disponible
-                const amount = Number(variantPrices[0].amount) || 0
-                productPrice = amount / 100
-                console.log(`💰 Usando primer precio disponible: ${amount} centavos = $${productPrice}`)
-              }
-            } else {
-              console.log(`⚠️ No se encontraron precios para variant ${firstVariant.id}`)
-            }
+            // Usar la función mejorada para obtener precios
+            productPrice = await getProductPrice(
+              pricingModuleService, 
+              firstVariant.id, 
+              region?.id
+            )
           }
         }
 
@@ -298,15 +316,19 @@ const transformProductsStep = createStep(
         
         // Debug adicional para el precio
         if (productPrice === 0) {
-          console.log(`⚠️ Precio es 0 para ${product.title}. Debug:`)
+          console.log(`⚠️ Precio es 0 para ${product.title}. Debug adicional:`)
           console.log(`  - Variants: ${product.variants?.length || 0}`)
           if (product.variants?.[0]) {
-            console.log(`  - Primer variant prices: ${product.variants[0].prices?.length || 0}`)
-            if (product.variants[0].prices?.length > 0) {
-              product.variants[0].prices.forEach((price, index) => {
-                console.log(`    ${index + 1}. ${price.currency_code}: ${price.amount} centavos`)
-              })
-            }
+            console.log(`  - Primer variant ID: ${product.variants[0].id}`)
+            console.log(`  - Región ID: ${region?.id || 'No disponible'}`)
+            
+            // Intentar obtener precios con debug adicional
+            const debugPrices = await getVariantPricesFromPricingModule(
+              pricingModuleService, 
+              product.variants[0].id, 
+              region?.id
+            )
+            console.log(`  - Precios encontrados en debug: ${debugPrices.length}`)
           }
         }
       } catch (error) {
