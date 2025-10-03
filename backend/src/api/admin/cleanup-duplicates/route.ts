@@ -1,7 +1,6 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { IProductModuleService } from "@medusajs/framework/types"
 import { ModuleRegistrationName } from "@medusajs/framework/utils"
-import { container } from "@medusajs/framework/utils"
 
 export async function POST(
   req: MedusaRequest,
@@ -10,15 +9,13 @@ export async function POST(
   try {
     console.log("🧹 Iniciando limpieza de productos duplicados desde API...")
 
-    // Resolver servicio de productos
-    const productModuleService: IProductModuleService = container.resolve(
+    // Resolver servicio de productos usando el container del request
+    const productModuleService: IProductModuleService = req.scope.resolve(
       ModuleRegistrationName.PRODUCT
     )
 
     // Obtener todos los productos
-    const allProducts = await productModuleService.listProducts({
-      relations: ["variants"]
-    })
+    const allProducts = await productModuleService.listProducts({})
 
     console.log(`📦 Total de productos encontrados: ${allProducts.length}`)
 

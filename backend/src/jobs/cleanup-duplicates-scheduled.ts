@@ -1,8 +1,9 @@
+import { MedusaContainer } from "@medusajs/framework/types"
 import { IProductModuleService } from "@medusajs/framework/types"
 import { ModuleRegistrationName } from "@medusajs/framework/utils"
 
-async function cleanupDuplicateProducts(container: any) {
-  console.log("🧹 Iniciando limpieza de productos duplicados...")
+export default async function cleanupDuplicatesScheduledJob(container: MedusaContainer) {
+  console.log("🧹 Iniciando limpieza automática de productos duplicados...")
 
   try {
     // Resolver servicio de productos
@@ -46,7 +47,7 @@ async function cleanupDuplicateProducts(container: any) {
 
     // Procesar cada grupo de duplicados
     for (const { handle, products } of duplicates) {
-      console.log(`\n🔄 Procesando duplicados para handle: ${handle}`)
+      console.log(`🔄 Procesando duplicados para handle: ${handle}`)
       
       // Ordenar por fecha de creación (más reciente primero)
       const sortedProducts = products.sort((a, b) => {
@@ -76,29 +77,15 @@ async function cleanupDuplicateProducts(container: any) {
       }
     }
 
-    console.log(`\n🎉 Limpieza completada:`)
+    console.log(`🎉 Limpieza automática completada:`)
     console.log(`   🗑️ Productos eliminados: ${deletedCount}`)
-    console.log(`   ✅ Productos únicos mantenidos`)
 
   } catch (error) {
-    console.error("❌ Error en limpieza de duplicados:", error)
+    console.error("❌ Error en limpieza automática de duplicados:", error)
   }
 }
 
-// Ejecutar si se llama directamente
-if (require.main === module) {
-  // Importar container dinámicamente
-  import("@medusajs/framework/utils").then(({ container }) => {
-    cleanupDuplicateProducts(container)
-      .then(() => {
-        console.log("✅ Script de limpieza completado")
-        process.exit(0)
-      })
-      .catch((error) => {
-        console.error("❌ Error ejecutando script:", error)
-        process.exit(1)
-      })
-  })
+export const config = {
+  name: "cleanup-duplicates-scheduled",
+  schedule: "0 1 * * *", // Una vez al día a la 1:00 AM
 }
-
-export default cleanupDuplicateProducts
