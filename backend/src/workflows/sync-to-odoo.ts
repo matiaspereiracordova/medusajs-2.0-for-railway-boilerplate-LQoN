@@ -4,7 +4,7 @@ import {
   StepResponse,
   WorkflowResponse,
 } from "@medusajs/workflows-sdk"
-import { IProductModuleService, IRegionModuleService } from "@medusajs/framework/types"
+import { IProductModuleService, IRegionModuleService, IPricingModuleService } from "@medusajs/framework/types"
 import { ModuleRegistrationName } from "@medusajs/framework/utils"
 import OdooModuleService, { OdooProduct } from "../modules/odoo/service.js"
 
@@ -29,6 +29,44 @@ async function convertImageToBase64(imageUrl: string): Promise<string | null> {
   } catch (error) {
     console.error(`❌ Error convirtiendo imagen a base64:`, error)
     return null
+  }
+}
+
+// Función para obtener precios usando el store API
+async function getVariantPricesFromStore(variantId: string, regionId?: string) {
+  try {
+    console.log(`💰 Obteniendo precios desde store API para variant: ${variantId}`)
+    
+    // Usar el store API para obtener precios calculados
+    const response = await fetch(`${process.env.BACKEND_URL || 'http://localhost:9000'}/store/products?region_id=${regionId}&fields=*variants.calculated_price`)
+    
+    if (!response.ok) {
+      console.warn(`⚠️ Error obteniendo productos desde store API: ${response.status}`)
+      return []
+    }
+    
+    const data = await response.json()
+    const products = data.products || []
+    
+    // Buscar el variant específico en los productos
+    for (const product of products) {
+      if (product.variants) {
+        const variant = product.variants.find((v: any) => v.id === variantId)
+        if (variant && variant.calculated_price) {
+          console.log(`💰 Precio calculado encontrado: ${variant.calculated_price.calculated_amount} centavos`)
+          return [{
+            currency_code: variant.calculated_price.currency_code,
+            amount: variant.calculated_price.calculated_amount
+          }]
+        }
+      }
+    }
+    
+    console.log(`⚠️ No se encontró precio calculado para variant ${variantId}`)
+    return []
+  } catch (error) {
+    console.error(`❌ Error obteniendo precios desde store API para variant ${variantId}:`, error)
+    return []
   }
 }
 
@@ -98,7 +136,7 @@ const getMedusaProductsStep = createStep(
         products = await Promise.all(
           productIds.map((id) =>
             productModuleService.retrieveProduct(id, {
-              relations: ["variants", "variants.prices", "categories", "tags", "images"],
+              relations: ["variants", "categories", "tags", "images"],
               // Intentar incluir contexto de región para calculated_price
               ...(region && { region_id: region.id })
             })
@@ -109,7 +147,7 @@ const getMedusaProductsStep = createStep(
         products = await productModuleService.listProducts(
           {},
           {
-            relations: ["variants", "variants.prices", "categories", "tags", "images"],
+            relations: ["variants", "categories", "tags", "images"],
             take: limit,
             skip: offset,
             // Intentar incluir contexto de región para calculated_price
@@ -162,7 +200,7 @@ const getMedusaProductsStep = createStep(
 const transformProductsStep = createStep(
   "transform-products",
   async (input, { container }) => {
-    const { products } = input as { products: any[] }
+    const { products, region } = input as { products: any[], region: any }
     
     if (!products || !Array.isArray(products)) {
       console.error("❌ Error: products no es un array válido:", products)
@@ -170,6 +208,9 @@ const transformProductsStep = createStep(
     }
     
     const odooModuleService: OdooModuleService = container.resolve("ODOO")
+    const pricingModuleService: IPricingModuleService = container.resolve(
+      ModuleRegistrationName.PRICING
+    )
 
     const transformedProducts = []
 
@@ -190,8 +231,6 @@ const transformProductsStep = createStep(
             id: firstVariant.id,
             title: firstVariant.title,
             sku: firstVariant.sku,
-            hasPrices: !!firstVariant.prices,
-            pricesLength: firstVariant.prices?.length || 0,
             hasCalculatedPrice: !!firstVariant.calculated_price,
             calculatedPrice: firstVariant.calculated_price
           })
@@ -200,22 +239,18 @@ const transformProductsStep = createStep(
           if (firstVariant.calculated_price?.calculated_amount) {
             productPrice = firstVariant.calculated_price.calculated_amount / 100
             console.log(`💰 Precio calculado encontrado: ${firstVariant.calculated_price.calculated_amount} centavos = $${productPrice}`)
-          } else if (firstVariant.prices && firstVariant.prices.length > 0) {
-            // Fallback a prices array
-            // Buscar precio en CLP (Chilean Peso) primero, luego USD como fallback
-            const clpPrice = firstVariant.prices.find(price => price.currency_code === 'clp')
-            const usdPrice = firstVariant.prices.find(price => price.currency_code === 'usd')
+          } else {
+            // Usar el store API para obtener precios calculados
+            const variantPrices = await getVariantPricesFromStore(firstVariant.id, region?.id)
             
-            if (clpPrice) {
-              productPrice = clpPrice.amount / 100 // Convertir de centavos
-              console.log(`💰 Precio CLP encontrado: ${clpPrice.amount} centavos = $${productPrice}`)
-            } else if (usdPrice) {
-              productPrice = usdPrice.amount / 100 // Convertir de centavos
-              console.log(`💰 Precio USD encontrado: ${usdPrice.amount} centavos = $${productPrice}`)
+            if (variantPrices.length > 0) {
+              // Usar el precio calculado del store API
+              const price = variantPrices[0]
+              const amount = Number(price.amount) || 0
+              productPrice = amount / 100 // Convertir de centavos
+              console.log(`💰 Precio desde store API: ${amount} centavos = $${productPrice} (${price.currency_code})`)
             } else {
-              // Si no hay CLP ni USD, usar el primer precio disponible
-              productPrice = firstVariant.prices[0].amount / 100
-              console.log(`💰 Usando primer precio disponible: ${firstVariant.prices[0].amount} centavos = $${productPrice}`)
+              console.log(`⚠️ No se encontraron precios para variant ${firstVariant.id}`)
             }
           }
         }
@@ -355,7 +390,7 @@ const syncToOdooWorkflow = createWorkflow(
     // @ts-ignore - MedusaJS workflow steps require input
     const { products } = getMedusaProductsStep({ input, region })
     // @ts-ignore - MedusaJS workflow steps require input
-    const { transformedProducts } = transformProductsStep({ products })
+    const { transformedProducts } = transformProductsStep({ products, region })
     // @ts-ignore - MedusaJS workflow steps require input
     const { createdCount, updatedCount, totalSynced, errorCount, errors } = syncProductsToOdooStep({ transformedProducts })
 
