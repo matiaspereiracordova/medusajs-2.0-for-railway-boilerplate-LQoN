@@ -151,6 +151,55 @@ export default class OdooModuleService {
     }
   }
 
+  async getProductPrice(productId: number, quantity: number = 1, partnerId?: number): Promise<number> {
+    await this.login()
+
+    try {
+      // Obtener la lista de precios por defecto
+      const defaultPricelist = await this.client.request("call", {
+        service: "object",
+        method: "execute_kw",
+        args: [
+          this.options.dbName,
+          this.uid,
+          this.options.apiKey,
+          "product.pricelist",
+          "search",
+          [[["active", "=", true]]],
+          { limit: 1 }
+        ],
+      }) as number[];
+
+      if (defaultPricelist.length === 0) {
+        console.warn("⚠️ No se encontró lista de precios activa");
+        return 0;
+      }
+
+      const pricelistId = defaultPricelist[0];
+      const token = process.env.ODOO_API_TOKEN || "default_token";
+
+      // Usar el método personalizado para obtener precio
+      const price = await this.client.request("call", {
+        service: "object",
+        method: "execute_kw",
+        args: [
+          this.options.dbName,
+          this.uid,
+          this.options.apiKey,
+          "product.pricelist",
+          "get_single_product_price",
+          [pricelistId, productId, quantity, partnerId, token],
+        ],
+      }) as number;
+
+      console.log(`💰 Precio obtenido para producto ${productId}: $${price}`);
+      return price;
+    } catch (error: any) {
+      console.error(`❌ Error obteniendo precio para producto ${productId}:`, error);
+      return 0;
+    }
+  }
+
   async updateProduct(productId: number, productData: any): Promise<boolean> {
     await this.login()
 

@@ -114,6 +114,74 @@ export class OdooClient {
       ],
     }) as number;
   }
+
+  async getProductPrice(productId: number, quantity: number = 1, partnerId?: number): Promise<number> {
+    await this.authenticate();
+
+    try {
+      // Método alternativo: obtener precio directamente del producto
+      const product = await this.client.request("call", {
+        service: "object",
+        method: "execute_kw",
+        args: [
+          this.db,
+          this.uid,
+          this.password,
+          "product.template",
+          "read",
+          [[productId]],
+          { fields: ["list_price", "currency_id"] }
+        ],
+      }) as any[];
+
+      if (product.length === 0) {
+        console.warn(`⚠️ Producto ${productId} no encontrado`);
+        return 0;
+      }
+
+      const productData = product[0];
+      const price = productData.list_price || 0;
+
+      console.log(`💰 Precio obtenido para producto ${productId}: $${price}`);
+      return price;
+    } catch (error: any) {
+      console.error(`❌ Error obteniendo precio para producto ${productId}:`, error);
+      return 0;
+    }
+  }
+
+  async getProductsPrice(productIds: number[], quantity: number = 1, partnerId?: number): Promise<Record<number, number>> {
+    await this.authenticate();
+
+    try {
+      // Método alternativo: obtener precios directamente de los productos
+      const products = await this.client.request("call", {
+        service: "object",
+        method: "execute_kw",
+        args: [
+          this.db,
+          this.uid,
+          this.password,
+          "product.template",
+          "read",
+          [productIds],
+          { fields: ["id", "list_price", "currency_id"] }
+        ],
+      }) as any[];
+
+      const prices: Record<number, number> = {};
+      
+      products.forEach(product => {
+        prices[product.id] = product.list_price || 0;
+      });
+
+      console.log(`💰 Precios obtenidos para ${products.length} productos`);
+      return prices;
+    } catch (error: any) {
+      console.error(`❌ Error obteniendo precios para productos:`, error);
+      return {};
+    }
+  }
 }
 
 export const odooClient = new OdooClient();
