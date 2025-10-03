@@ -41,8 +41,8 @@ export default async function seedDemoData({ container }: ExecArgs) {
     fields: ["id", "title"],
   });
   
-  if (existingProducts.length > 0) {
-    logger.info(`Found ${existingProducts.length} existing products, skipping product creation`);
+  if (existingProducts.data && existingProducts.data.length > 0) {
+    logger.info(`Found ${existingProducts.data.length} existing products, skipping product creation`);
     return;
   }
   let defaultSalesChannel = await salesChannelModuleService.listSalesChannels({
