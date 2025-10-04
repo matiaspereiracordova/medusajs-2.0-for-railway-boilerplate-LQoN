@@ -161,9 +161,12 @@ async function cleanupOdooDuplicatesSimple() {
       return;
     }
 
-    // Agrupar productos por x_medusa_id (productos sincronizados desde MedusaJS)
+    // Agrupar productos por diferentes criterios
     const duplicatesByMedusaId = new Map<string, OdooProduct[]>();
+    const duplicatesByName = new Map<string, OdooProduct[]>();
+    
     allProducts.forEach(product => {
+      // Agrupar por x_medusa_id (productos sincronizados desde MedusaJS)
       if (product.x_medusa_id) {
         const key = product.x_medusa_id;
         if (!duplicatesByMedusaId.has(key)) {
@@ -171,9 +174,16 @@ async function cleanupOdooDuplicatesSimple() {
         }
         duplicatesByMedusaId.get(key)!.push(product);
       }
+      
+      // Agrupar por nombre (normalizado)
+      const normalizedName = product.name.toLowerCase().trim();
+      if (!duplicatesByName.has(normalizedName)) {
+        duplicatesByName.set(normalizedName, []);
+      }
+      duplicatesByName.get(normalizedName)!.push(product);
     });
 
-    // Encontrar duplicados por x_medusa_id
+    // Encontrar duplicados
     const duplicateGroups: Array<{
       key: string;
       products: OdooProduct[];
@@ -181,12 +191,15 @@ async function cleanupOdooDuplicatesSimple() {
       productsToDelete: OdooProduct[];
     }> = [];
 
+    // Duplicados por x_medusa_id (más críticos)
     for (const [medusaId, products] of duplicatesByMedusaId.entries()) {
       if (products.length > 1) {
         const sortedProducts = products.sort((a, b) => {
-          // Priorizar: activo > fecha de modificación más reciente
+          // Priorizar: activo > precio > fecha de modificación más reciente
           if (a.active && !b.active) return -1;
           if (!a.active && b.active) return 1;
+          if (a.list_price > 0 && b.list_price === 0) return -1;
+          if (a.list_price === 0 && b.list_price > 0) return 1;
           return new Date(b.write_date).getTime() - new Date(a.write_date).getTime();
         });
 
@@ -196,6 +209,48 @@ async function cleanupOdooDuplicatesSimple() {
           keepProduct: sortedProducts[0],
           productsToDelete: sortedProducts.slice(1)
         });
+      }
+    }
+
+    // Duplicados por nombre - manejar casos mixtos (con y sin x_medusa_id)
+    for (const [name, products] of duplicatesByName.entries()) {
+      if (products.length > 1) {
+        const productsWithoutMedusaId = products.filter(p => !p.x_medusa_id);
+        const productsWithMedusaId = products.filter(p => p.x_medusa_id);
+        
+        // Caso 1: Solo productos sin x_medusa_id
+        if (productsWithoutMedusaId.length > 1 && productsWithMedusaId.length === 0) {
+          const sortedProducts = productsWithoutMedusaId.sort((a, b) => {
+            if (a.active && !b.active) return -1;
+            if (!a.active && b.active) return 1;
+            if (a.list_price > 0 && b.list_price === 0) return -1;
+            if (a.list_price === 0 && b.list_price > 0) return 1;
+            return new Date(b.write_date).getTime() - new Date(a.write_date).getTime();
+          });
+
+          duplicateGroups.push({
+            key: `name: ${name} (sin x_medusa_id)`,
+            products: productsWithoutMedusaId,
+            keepProduct: sortedProducts[0],
+            productsToDelete: sortedProducts.slice(1)
+          });
+        }
+        
+        // Caso 2: Productos mixtos - priorizar el original de Odoo (sin x_medusa_id, con precio > 0)
+        else if (productsWithoutMedusaId.length > 0 && productsWithMedusaId.length > 0) {
+          // Buscar el producto original de Odoo (sin x_medusa_id, con precio > 0)
+          const originalProduct = productsWithoutMedusaId.find(p => p.list_price > 0);
+          const syncProducts = productsWithMedusaId.filter(p => p.list_price === 0);
+          
+          if (originalProduct && syncProducts.length > 0) {
+            duplicateGroups.push({
+              key: `name: ${name} (mixto - eliminar sync con precio 0)`,
+              products: [originalProduct, ...syncProducts],
+              keepProduct: originalProduct,
+              productsToDelete: syncProducts
+            });
+          }
+        }
       }
     }
 
@@ -313,9 +368,12 @@ async function identifyOdooDuplicatesSimple() {
 
     console.log(`📦 Total de productos encontrados: ${allProducts.length}`);
 
-    // Agrupar por x_medusa_id
+    // Agrupar por diferentes criterios
     const duplicatesByMedusaId = new Map<string, OdooProduct[]>();
+    const duplicatesByName = new Map<string, OdooProduct[]>();
+    
     allProducts.forEach(product => {
+      // Agrupar por x_medusa_id
       if (product.x_medusa_id) {
         const key = product.x_medusa_id;
         if (!duplicatesByMedusaId.has(key)) {
@@ -323,28 +381,70 @@ async function identifyOdooDuplicatesSimple() {
         }
         duplicatesByMedusaId.get(key)!.push(product);
       }
+      
+      // Agrupar por nombre
+      const normalizedName = product.name.toLowerCase().trim();
+      if (!duplicatesByName.has(normalizedName)) {
+        duplicatesByName.set(normalizedName, []);
+      }
+      duplicatesByName.get(normalizedName)!.push(product);
     });
+
+    let totalDuplicateCount = 0;
 
     // Mostrar duplicados por x_medusa_id
     console.log("\n🔍 Duplicados por x_medusa_id:");
-    let duplicateCount = 0;
+    let medusaDuplicateCount = 0;
     for (const [medusaId, products] of duplicatesByMedusaId.entries()) {
       if (products.length > 1) {
-        duplicateCount++;
-        console.log(`\n${duplicateCount}. Medusa ID: ${medusaId} (${products.length} productos)`);
+        medusaDuplicateCount++;
+        console.log(`\n${medusaDuplicateCount}. Medusa ID: ${medusaId} (${products.length} productos)`);
         products.forEach((product, index) => {
-          console.log(`   ${index + 1}. ${product.name} (ID: ${product.id}) - ${product.active ? 'Activo' : 'Inactivo'} - ${product.write_date}`);
+          console.log(`   ${index + 1}. ${product.name} (ID: ${product.id}) - ${product.active ? 'Activo' : 'Inactivo'} - $${product.list_price} - ${product.write_date}`);
         });
       }
     }
 
-    if (duplicateCount === 0) {
+    if (medusaDuplicateCount === 0) {
       console.log("✅ No se encontraron duplicados por x_medusa_id");
     }
 
+    totalDuplicateCount += medusaDuplicateCount;
+
+    // Mostrar duplicados por nombre
+    console.log("\n🔍 Duplicados por nombre:");
+    let nameDuplicateCount = 0;
+    for (const [name, products] of duplicatesByName.entries()) {
+      if (products.length > 1) {
+        nameDuplicateCount++;
+        console.log(`\n${nameDuplicateCount}. Nombre: "${name}" (${products.length} productos)`);
+        products.forEach((product, index) => {
+          console.log(`   ${index + 1}. ${product.name} (ID: ${product.id}) - ${product.active ? 'Activo' : 'Inactivo'} - $${product.list_price} - Ref: ${product.default_code || 'N/A'} - MedusaID: ${product.x_medusa_id || 'N/A'} - ${product.write_date}`);
+        });
+        
+        // Verificar si hay diferencias importantes
+        const hasMedusaId = products.some(p => p.x_medusa_id);
+        const hasNoMedusaId = products.some(p => !p.x_medusa_id);
+        const hasDifferentPrices = products.some(p => p.list_price !== products[0].list_price);
+        
+        if (hasMedusaId && hasNoMedusaId) {
+          console.log(`   ⚠️ MIXTO: Algunos tienen x_medusa_id y otros no`);
+        }
+        if (hasDifferentPrices) {
+          console.log(`   ⚠️ PRECIOS DIFERENTES: Los productos tienen precios distintos`);
+        }
+      }
+    }
+
+    if (nameDuplicateCount === 0) {
+      console.log("✅ No se encontraron duplicados por nombre");
+    }
+
+    totalDuplicateCount += nameDuplicateCount;
+
     return {
       totalProducts: allProducts.length,
-      duplicatesFound: duplicateCount
+      duplicatesFound: totalDuplicateCount
     };
 
   } catch (error) {
