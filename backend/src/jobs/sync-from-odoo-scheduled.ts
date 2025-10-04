@@ -177,5 +177,5 @@ export default async function syncFromOdooScheduledJob(container: MedusaContaine
 
 export const config = {
   name: "sync-from-odoo-scheduled",
-  schedule: "0 */2 * * *", // Cada 2 horas (más frecuente para pruebas)
+  schedule: "0 0 1 1 *", // Desactivado - solo se ejecuta una vez al año (1 de enero)
 }

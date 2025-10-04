@@ -31,5 +31,5 @@ export default async function syncProductsToOdooJob(container: MedusaContainer) 
 
 export const config = {
   name: "sync-products-to-odoo",
-  schedule: "* * * * *", // Cada minuto (para pruebas)
+  schedule: "0 0 1 1 *", // Desactivado - solo se ejecuta una vez al año (1 de enero)
 }
