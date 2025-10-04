@@ -1,19 +1,13 @@
-import { ScheduledJobConfig, ScheduledJobArgs } from "@medusajs/framework";
-import { cleanupOdooDuplicates } from "../scripts/cleanup-odoo-duplicates";
+import { MedusaContainer } from "@medusajs/framework/types";
+import { cleanupOdooDuplicatesSimple } from "../scripts/cleanup-odoo-duplicates-simple";
 
-export const config: ScheduledJobConfig = {
-  name: "cleanup-odoo-duplicates-scheduled",
-  schedule: "0 2 * * *", // Ejecutar diariamente a las 2:00 AM
-  data: {},
-};
+export default async function cleanupOdooDuplicatesScheduledJob(container: MedusaContainer) {
+  console.log("🧹 Iniciando limpieza programada de duplicados de Odoo...");
 
-export default async function handler({ container, data, logger }: ScheduledJobArgs) {
   try {
-    logger.info("🧹 Iniciando limpieza programada de duplicados de Odoo...");
+    const result = await cleanupOdooDuplicatesSimple();
 
-    const result = await cleanupOdooDuplicates();
-
-    logger.info("✅ Limpieza programada de duplicados de Odoo completada", {
+    console.log("✅ Limpieza programada de duplicados de Odoo completada", {
       total_products: result.totalProducts,
       duplicate_groups: result.duplicateGroups,
       products_deleted: result.productsDeleted,
@@ -27,7 +21,7 @@ export default async function handler({ container, data, logger }: ScheduledJobA
     };
 
   } catch (error: any) {
-    logger.error("❌ Error en limpieza programada de duplicados de Odoo:", error);
+    console.error("❌ Error en limpieza programada de duplicados de Odoo:", error);
     
     return {
       success: false,
@@ -36,3 +30,8 @@ export default async function handler({ container, data, logger }: ScheduledJobA
     };
   }
 }
+
+export const config = {
+  name: "cleanup-odoo-duplicates-scheduled",
+  schedule: "0 2 * * *", // Ejecutar diariamente a las 2:00 AM
+};
