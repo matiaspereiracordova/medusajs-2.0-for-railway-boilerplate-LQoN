@@ -115,6 +115,23 @@ export class OdooClient {
     }) as number;
   }
 
+  async update(model: string, id: number, values: any): Promise<boolean> {
+    await this.authenticate();
+
+    return await this.client.request("call", {
+      service: "object",
+      method: "execute_kw",
+      args: [
+        this.db,
+        this.uid,
+        this.password,
+        model,
+        "write",
+        [[id], values],
+      ],
+    }) as boolean;
+  }
+
   async getProductPrice(productId: number, quantity: number = 1, partnerId?: number): Promise<number> {
     await this.authenticate();
 
