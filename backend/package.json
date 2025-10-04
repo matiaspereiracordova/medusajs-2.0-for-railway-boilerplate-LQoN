@@ -18,7 +18,14 @@
     "ib": "init-backend",
     "start": "init-backend && cd .medusa/server && medusa start --verbose",
     "dev": "medusa develop",
-    "email:dev": "email dev --dir=./src/modules/email-notifications/templates --port=3002"
+    "email:dev": "email dev --dir=./src/modules/email-notifications/templates --port=3002",
+    "cleanup-odoo-duplicates": "medusa exec ./src/scripts/cleanup-odoo-duplicates.ts",
+    "identify-odoo-duplicates": "medusa exec ./src/scripts/cleanup-odoo-duplicates.ts identify",
+    "test-odoo-cleanup": "medusa exec ./src/scripts/test-odoo-cleanup.ts",
+    "cleanup-odoo-standalone": "ts-node ./src/scripts/cleanup-odoo-duplicates-standalone.ts",
+    "identify-odoo-standalone": "ts-node ./src/scripts/cleanup-odoo-duplicates-standalone.ts identify",
+    "cleanup-odoo-simple": "ts-node ./src/scripts/cleanup-odoo-duplicates-simple.ts",
+    "identify-odoo-simple": "ts-node ./src/scripts/cleanup-odoo-duplicates-simple.ts identify"
   },
   "dependencies": {
     "@medusajs/admin-sdk": "2.10.2",
