@@ -2,6 +2,7 @@ import { MedusaContainer } from "@medusajs/framework/types"
 import { odooClient } from "../services/odoo-client"
 import { IProductModuleService, IPricingModuleService, IRegionModuleService } from "@medusajs/framework/types"
 import { ModuleRegistrationName } from "@medusajs/framework/utils"
+import { checkProductExists, updateExistingProduct } from "../utils/duplicate-detector"
 
 // Función para convertir imagen URL a base64
 async function convertImageToBase64(imageUrl: string): Promise<string | null> {
@@ -93,18 +94,29 @@ export default async function syncFromOdooScheduledJob(container: MedusaContaine
       return handle
     }
 
-    // Procesar cada producto
+    // Procesar cada producto con lógica anti-duplicados
     for (const odooProduct of odooProducts) {
       try {
         console.log(`📤 Procesando: ${odooProduct.name}`)
         
-        // Buscar si ya existe
-        let existingProduct = null
+        // Verificar si el producto ya existe usando la lógica anti-duplicados
+        const { exists, existingProduct, isDuplicate } = await checkProductExists(
+          odooProduct.name,
+          odooProduct.x_medusa_id
+        )
+
+        if (exists && isDuplicate) {
+          console.log(`⚠️ Duplicado detectado para ${odooProduct.name}, omitiendo para evitar duplicación`)
+          continue
+        }
+
+        // Buscar si ya existe en MedusaJS
+        let existingMedusaProduct = null
         if (odooProduct.x_medusa_id) {
           try {
-            existingProduct = await productModuleService.retrieveProduct(odooProduct.x_medusa_id)
+            existingMedusaProduct = await productModuleService.retrieveProduct(odooProduct.x_medusa_id)
           } catch (error) {
-            // Producto no existe, continuar con creación
+            // Producto no existe en MedusaJS, continuar con creación
           }
         }
 
@@ -130,15 +142,15 @@ export default async function syncFromOdooScheduledJob(container: MedusaContaine
           }]
         }
 
-        if (existingProduct) {
-          // Actualizar producto existente
-          await productModuleService.updateProducts(existingProduct.id, {
+        if (existingMedusaProduct) {
+          // Actualizar producto existente en MedusaJS
+          await productModuleService.updateProducts(existingMedusaProduct.id, {
             ...productData
           })
           updatedCount++
-          console.log(`✅ Producto actualizado: ${productData.title}`)
+          console.log(`✅ Producto actualizado en MedusaJS: ${productData.title}`)
         } else {
-          // Crear nuevo producto
+          // Crear nuevo producto en MedusaJS
           const newProduct = await productModuleService.createProducts({
             ...productData,
             variants: [variantData]
@@ -147,16 +159,16 @@ export default async function syncFromOdooScheduledJob(container: MedusaContaine
           // Actualizar Odoo con el ID de MedusaJS
           if (newProduct) {
             try {
-              await odooClient.create("product.template", {
-                id: odooProduct.id,
+              await odooClient.update("product.template", odooProduct.id, {
                 x_medusa_id: newProduct.id
               })
+              console.log(`✅ Odoo actualizado con MedusaJS ID: ${productData.title}`)
             } catch (error) {
-              console.warn(`⚠️ No se pudo actualizar Odoo para ${productData.title}`)
+              console.warn(`⚠️ No se pudo actualizar Odoo para ${productData.title}:`, error)
             }
           }
           createdCount++
-          console.log(`✅ Producto creado: ${productData.title}`)
+          console.log(`✅ Producto creado en MedusaJS: ${productData.title}`)
         }
         
       } catch (error: any) {
@@ -177,5 +189,5 @@ export default async function syncFromOdooScheduledJob(container: MedusaContaine
 
 export const config = {
   name: "sync-from-odoo-scheduled",
-  schedule: "0 0 1 1 *", // Desactivado - solo se ejecuta una vez al año (1 de enero)
+  schedule: "0 */12 * * *", // Cada 12 horas (frecuencia más razonable)
 }

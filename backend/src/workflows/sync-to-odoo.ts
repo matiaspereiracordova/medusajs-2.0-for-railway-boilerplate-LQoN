@@ -7,6 +7,7 @@ import {
 import { IProductModuleService, IRegionModuleService, IPricingModuleService } from "@medusajs/framework/types"
 import { ModuleRegistrationName } from "@medusajs/framework/utils"
 import OdooModuleService, { OdooProduct } from "../modules/odoo/service.js"
+import { checkProductExists, updateExistingProduct } from "../utils/duplicate-detector"
 
 // Función para convertir imagen URL a base64
 async function convertImageToBase64(imageUrl: string): Promise<string | null> {
@@ -364,7 +365,7 @@ const transformProductsStep = createStep(
   }
 )
 
-// Step 3: Sincronizar productos con ODOO
+// Step 3: Sincronizar productos con ODOO (con lógica anti-duplicados)
 const syncProductsToOdooStep = createStep(
   "sync-products-to-odoo",
   async (input, { container }) => {
@@ -384,23 +385,63 @@ const syncProductsToOdooStep = createStep(
 
     let createdCount = 0
     let updatedCount = 0
+    let skippedCount = 0
     let errorCount = 0
     const errors = []
 
-    console.log(`🔄 Iniciando sincronización de ${transformedProducts.length} productos con ODOO...`)
+    console.log(`🔄 Iniciando sincronización inteligente de ${transformedProducts.length} productos con ODOO...`)
 
     for (const { medusaProduct, odooProductData, existsInOdoo, odooProductId } of transformedProducts) {
       try {
         console.log(`📤 Procesando: ${odooProductData.name}`)
         
-        if (existsInOdoo && odooProductId) {
-          // Actualizar producto existente
+        // Verificar si el producto ya existe usando la lógica anti-duplicados
+        const { exists, existingProduct, isDuplicate } = await checkProductExists(
+          odooProductData.name,
+          odooProductData.x_medusa_id
+        )
+
+        if (exists && existingProduct) {
+          if (isDuplicate) {
+            console.log(`⚠️ Duplicado detectado para ${odooProductData.name}, actualizando en lugar de crear`)
+            
+            // Actualizar el producto existente con los datos más recientes
+            const updateSuccess = await updateExistingProduct(existingProduct.id, {
+              name: odooProductData.name,
+              list_price: odooProductData.list_price,
+              default_code: odooProductData.default_code,
+              x_medusa_id: odooProductData.x_medusa_id,
+              description: odooProductData.description,
+              active: odooProductData.active,
+              image_1920: odooProductData.image_1920
+            })
+            
+            if (updateSuccess) {
+              updatedCount++
+              console.log(`✅ Producto duplicado actualizado: ${odooProductData.name} (ID: ${existingProduct.id})`)
+            } else {
+              errorCount++
+              errors.push({
+                product: odooProductData.name,
+                medusaId: medusaProduct.id,
+                error: "Error actualizando producto duplicado"
+              })
+            }
+          } else {
+            // Producto existe pero no es duplicado problemático, actualizar normalmente
+            console.log(`🔄 Actualizando producto existente: ${odooProductData.name} (ID: ${existingProduct.id})`)
+            await odooModuleService.updateProduct(existingProduct.id, odooProductData)
+            updatedCount++
+            console.log(`✅ Producto actualizado: ${odooProductData.name}`)
+          }
+        } else if (existsInOdoo && odooProductId) {
+          // Lógica original para productos que ya existían
           console.log(`🔄 Actualizando producto existente en ODOO: ${odooProductData.name} (ID: ${odooProductId})`)
           await odooModuleService.updateProduct(odooProductId, odooProductData)
           updatedCount++
           console.log(`✅ Producto actualizado en ODOO: ${odooProductData.name}`)
         } else {
-          // Crear nuevo producto
+          // Crear nuevo producto solo si no existe
           console.log(`➕ Creando nuevo producto en ODOO: ${odooProductData.name}`)
           const newOdooProductId = await odooModuleService.createProduct(odooProductData)
           createdCount++
@@ -418,9 +459,10 @@ const syncProductsToOdooStep = createStep(
       }
     }
 
-    console.log(`📊 Resumen de sincronización:`)
+    console.log(`📊 Resumen de sincronización inteligente:`)
     console.log(`   ✅ Productos creados: ${createdCount}`)
     console.log(`   🔄 Productos actualizados: ${updatedCount}`)
+    console.log(`   ⏭️ Productos omitidos: ${skippedCount}`)
     console.log(`   ❌ Errores: ${errorCount}`)
     
     if (errors.length > 0) {
