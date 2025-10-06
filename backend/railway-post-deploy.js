@@ -5,11 +5,17 @@ const fs = require('fs');
 const path = require('path');
 
 console.log('🚀 Railway Post-Deploy Script Starting...');
+console.log('🔍 Environment variables:');
+console.log('  - NODE_ENV:', process.env.NODE_ENV);
+console.log('  - RAILWAY_ENVIRONMENT:', process.env.RAILWAY_ENVIRONMENT);
+console.log('  - RAILWAY_PROJECT_ID:', process.env.RAILWAY_PROJECT_ID);
 
 // Check if we're in Railway production
 const isRailwayProduction = process.env.RAILWAY_ENVIRONMENT === 'production' || 
                            process.env.RAILWAY_ENVIRONMENT === 'main' ||
                            process.env.NODE_ENV === 'production';
+
+console.log('🌍 Is Railway production?', isRailwayProduction);
 
 if (!isRailwayProduction) {
   console.log('🔧 Not in Railway production environment, skipping seed...');
