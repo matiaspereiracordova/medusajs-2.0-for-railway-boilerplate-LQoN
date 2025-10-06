@@ -112,7 +112,7 @@ export async function POST(
           syncedPrices: result.result.syncedPrices,
           errorCount: result.result.errorCount,
           errors: result.result.errors,
-          totalPricesInSystem: result.result.totalPricesInSystem
+          totalPricesInSystem: 0
         },
         timestamp
       },
