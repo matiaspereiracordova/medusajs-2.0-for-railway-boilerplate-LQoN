@@ -7,6 +7,7 @@ import {
 import { IProductModuleService, IPricingModuleService, IRegionModuleService } from "@medusajs/framework/types"
 import { ModuleRegistrationName } from "@medusajs/framework/utils"
 import OdooModuleService from "../modules/odoo/service.js"
+import { odooClient } from "../services/odoo-client"
 
 type SyncPricesToOdooWorkflowInput = {
   productIds?: string[]
@@ -201,7 +202,7 @@ const syncPricesToOdooStep = createStep(
           }
 
           // Buscar variante en Odoo por SKU o nombre
-          const odooVariants = await odooModuleService.searchRead(
+          const odooVariants = await odooClient.searchRead(
             "product.product",
             [
               ["product_tmpl_id", "=", odooProduct.id],
@@ -221,7 +222,7 @@ const syncPricesToOdooStep = createStep(
                                variant.prices[0]
 
             if (variantPrice) {
-              await odooModuleService.update("product.product", odooVariant.id, {
+              await odooClient.update("product.product", odooVariant.id, {
                 list_price: variantPrice.amount_in_dollars
               })
               

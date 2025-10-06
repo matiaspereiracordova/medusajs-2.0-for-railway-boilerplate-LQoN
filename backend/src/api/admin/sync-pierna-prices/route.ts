@@ -1,6 +1,6 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import syncPricesToOdooWorkflow from "../../../workflows/sync-prices-to-odoo.js"
-import { IProductModuleService } from "@medusajs/framework/types"
+import syncPricesToOdooWorkflow from "../../../workflows/sync-prices-to-odoo-simple.js"
+import { IProductModuleService, IPricingModuleService } from "@medusajs/framework/types"
 import { ModuleRegistrationName } from "@medusajs/framework/utils"
 
 export async function POST(
@@ -15,11 +15,14 @@ export async function POST(
     const productModuleService: IProductModuleService = req.scope.resolve(
       ModuleRegistrationName.PRODUCT
     )
+    const pricingModuleService: IPricingModuleService = req.scope.resolve(
+      ModuleRegistrationName.PRICING
+    )
 
     const products = await productModuleService.listProducts({
       title: "pierna"
     }, {
-      relations: ["variants", "variants.prices"],
+      relations: ["variants"],
       take: 1
     })
 
@@ -37,19 +40,32 @@ export async function POST(
     console.log(`[${timestamp}] 📦 PRICE-TEST: Producto encontrado - "${product.title}" (${product.status})`)
     console.log(`[${timestamp}] 📦 PRICE-TEST: ID: ${product.id}, Variants: ${product.variants?.length || 0}`)
 
+    // Obtener todos los precios del sistema
+    const allPrices = await pricingModuleService.listPrices()
+    console.log(`[${timestamp}] 💰 PRICE-TEST: Total de precios en el sistema: ${allPrices.length}`)
+
     // Mostrar información detallada de precios
     if (product.variants && product.variants.length > 0) {
       console.log(`[${timestamp}] 💰 PRICE-TEST: Información de precios:`)
-      product.variants.forEach((variant, index) => {
+      for (const [index, variant] of product.variants.entries()) {
         console.log(`[${timestamp}]   Variant ${index + 1}: ${variant.title}`)
         console.log(`[${timestamp}]   - SKU: ${variant.sku}`)
-        console.log(`[${timestamp}]   - Precios: ${variant.prices?.length || 0}`)
-        if (variant.prices && variant.prices.length > 0) {
-          variant.prices.forEach((price: any, priceIndex: number) => {
+        
+        // Buscar precios para esta variante
+        const variantPrices = allPrices.filter((price: any) => {
+          return price.variant_id === variant.id || 
+                 (Array.isArray(price.variant_id) && price.variant_id.includes(variant.id)) ||
+                 price.price_set_id === variant.id ||
+                 (price.price_set && price.price_set.variant_id === variant.id)
+        })
+        
+        console.log(`[${timestamp}]   - Precios encontrados: ${variantPrices.length}`)
+        if (variantPrices.length > 0) {
+          variantPrices.forEach((price: any, priceIndex: number) => {
             console.log(`[${timestamp}]     ${priceIndex + 1}. ${price.currency_code}: ${price.amount} centavos ($${(price.amount / 100).toFixed(2)})`)
           })
         }
-      })
+      }
     }
 
     // Ejecutar sincronización específica de precios
@@ -72,15 +88,24 @@ export async function POST(
           status: product.status,
           variants: product.variants?.length || 0
         },
-        priceInfo: product.variants?.map(variant => ({
-          title: variant.title,
-          sku: variant.sku,
-          prices: variant.prices?.map((price: any) => ({
-            currency: price.currency_code,
-            amount: price.amount,
-            amount_dollars: (price.amount / 100).toFixed(2)
-          })) || []
-        })) || [],
+        priceInfo: product.variants?.map(variant => {
+          const variantPrices = allPrices.filter((price: any) => {
+            return price.variant_id === variant.id || 
+                   (Array.isArray(price.variant_id) && price.variant_id.includes(variant.id)) ||
+                   price.price_set_id === variant.id ||
+                   (price.price_set && price.price_set.variant_id === variant.id)
+          })
+          
+          return {
+            title: variant.title,
+            sku: variant.sku,
+            prices: variantPrices.map((price: any) => ({
+              currency: price.currency_code,
+              amount: price.amount,
+              amount_dollars: (price.amount / 100).toFixed(2)
+            }))
+          }
+        }) || [],
         syncResult: {
           syncedProducts: result.result.syncedProducts,
           syncedVariants: result.result.syncedVariants,

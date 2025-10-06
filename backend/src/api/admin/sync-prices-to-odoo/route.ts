@@ -1,5 +1,5 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import syncPricesToOdooWorkflow from "../../../workflows/sync-prices-to-odoo.js"
+import syncPricesToOdooWorkflow from "../../../workflows/sync-prices-to-odoo-simple.js"
 
 export async function POST(
   req: MedusaRequest,
