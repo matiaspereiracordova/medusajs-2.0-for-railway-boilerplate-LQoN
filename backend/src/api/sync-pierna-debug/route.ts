@@ -1,5 +1,5 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import syncPiernaPricesWorkflow from "../../../workflows/sync-pierna-debug.js"
+import syncPiernaPricesWorkflow from "../../../workflows/sync-pierna-debug"
 
 export async function POST(
   req: MedusaRequest,
