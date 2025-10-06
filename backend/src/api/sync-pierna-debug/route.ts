@@ -1,7 +1,7 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { IProductModuleService, IPricingModuleService } from "@medusajs/framework/types"
 import { ModuleRegistrationName } from "@medusajs/framework/utils"
-import OdooModuleService from "../../../modules/odoo/service.js"
+import OdooModuleService from "../../../modules/odoo/service"
 import { odooClient } from "../../../services/odoo-client"
 
 export async function POST(
@@ -97,7 +97,7 @@ export async function POST(
       if (product.variants && product.variants.length > 0) {
         const firstVariant = product.variants[0]
         const variantPrices = await pricingModuleService.listPrices({
-          variant_id: firstVariant.id
+          variant_id: [firstVariant.id]
         })
 
         if (variantPrices.length > 0) {
@@ -131,7 +131,7 @@ export async function POST(
         console.log(`[${timestamp}] 🔄 DEBUG-SYNC: Procesando variant Medusa: "${variant.title}" (ID: ${variant.id}, SKU: ${variant.sku})`)
 
         const variantPrices = await pricingModuleService.listPrices({
-          variant_id: variant.id
+          variant_id: [variant.id]
         })
 
         if (!variantPrices || variantPrices.length === 0) {
