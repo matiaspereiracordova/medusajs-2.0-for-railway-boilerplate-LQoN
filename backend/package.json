@@ -17,6 +17,7 @@
     "seed": "medusa exec ./src/scripts/seed.ts",
     "ib": "init-backend",
     "start": "init-backend && cd .medusa/server && medusa start --verbose",
+    "start:with-seed": "init-backend && cd .medusa/server && medusa exec ../../src/scripts/seed.ts && medusa start --verbose",
     "dev": "medusa develop",
     "email:dev": "email dev --dir=./src/modules/email-notifications/templates --port=3002",
     "cleanup-odoo-duplicates": "medusa exec ./src/scripts/cleanup-odoo-duplicates.ts",
