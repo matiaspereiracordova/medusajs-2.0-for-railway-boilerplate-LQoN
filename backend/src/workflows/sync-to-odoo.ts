@@ -330,9 +330,18 @@ const transformProductsStep = createStep(
           image_1920: productImageBase64, // Imagen principal del producto en base64
         }
 
+        // Preparar datos de variantes con precios para sincronización posterior
+        const variantData = product.variants?.map(variant => ({
+          id: variant.id,
+          title: variant.title,
+          sku: variant.sku,
+          prices: variant.prices || []
+        })) || []
+
         transformedProducts.push({
           medusaProduct: product,
           odooProductData,
+          variantData,
           existsInOdoo: existingOdooProducts.length > 0,
           odooProductId: existingOdooProducts[0]?.id,
         })
