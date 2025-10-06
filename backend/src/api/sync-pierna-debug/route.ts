@@ -1,7 +1,7 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { IProductModuleService, IPricingModuleService } from "@medusajs/framework/types"
 import { ModuleRegistrationName } from "@medusajs/framework/utils"
-import OdooModuleService from "../../../modules/odoo/service"
+import OdooModuleService from "../../../modules/odoo/service.js"
 import { odooClient } from "../../../services/odoo-client"
 
 export async function POST(
@@ -96,8 +96,12 @@ export async function POST(
       let basePrice = 0
       if (product.variants && product.variants.length > 0) {
         const firstVariant = product.variants[0]
-        const variantPrices = await pricingModuleService.listPrices({
-          variant_id: [firstVariant.id]
+        const allPrices = await pricingModuleService.listPrices()
+        const variantPrices = allPrices.filter((price: any) => {
+          return price.variant_id === firstVariant.id || 
+                 (Array.isArray(price.variant_id) && price.variant_id.includes(firstVariant.id)) ||
+                 price.price_set_id === firstVariant.id ||
+                 (price.price_set && price.price_set.variant_id === firstVariant.id)
         })
 
         if (variantPrices.length > 0) {
@@ -130,8 +134,12 @@ export async function POST(
       for (const variant of product.variants || []) {
         console.log(`[${timestamp}] 🔄 DEBUG-SYNC: Procesando variant Medusa: "${variant.title}" (ID: ${variant.id}, SKU: ${variant.sku})`)
 
-        const variantPrices = await pricingModuleService.listPrices({
-          variant_id: [variant.id]
+        const allPrices = await pricingModuleService.listPrices()
+        const variantPrices = allPrices.filter((price: any) => {
+          return price.variant_id === variant.id || 
+                 (Array.isArray(price.variant_id) && price.variant_id.includes(variant.id)) ||
+                 price.price_set_id === variant.id ||
+                 (price.price_set && price.price_set.variant_id === variant.id)
         })
 
         if (!variantPrices || variantPrices.length === 0) {
