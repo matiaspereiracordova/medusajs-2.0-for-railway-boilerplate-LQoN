@@ -307,281 +307,381 @@ export default async function seedDemoData({ container }: ExecArgs) {
 
   logger.info("Seeding Chilean pet product categories...");
 
-  const { result: categoryResult } = await createProductCategoriesWorkflow(
+  // Crear categorías principales primero
+  const { result: mainCategories } = await createProductCategoriesWorkflow(
+    container
+  ).run({
+    input: {
+      product_categories: [
+        {
+          name: "Perro",
+          is_active: true,
+        },
+        {
+          name: "Gato",
+          is_active: true,
+        },
+      ],
+    },
+  });
+
+  // Crear subcategorías para Perros
+  const { result: perroSubCategories } = await createProductCategoriesWorkflow(
     container
   ).run({
     input: {
       product_categories: [
         // Perro - Comida
         {
-          name: "Comida Seca para Perros",
+          name: "Comida Seca",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
           is_active: true,
         },
         {
-          name: "Comida Húmeda para Perros",
+          name: "Comida Húmeda",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
           is_active: true,
         },
         {
-          name: "Comida Medicada para Perros",
+          name: "Comida Medicada",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
           is_active: true,
         },
         {
-          name: "Dietas Especiales para Perros",
+          name: "Dietas Especiales",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
           is_active: true,
         },
         // Perro - Snacks y Premios
         {
-          name: "Huesos y Bully Sticks",
+          name: "Huesos, Bully Sticks / Naturales",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
           is_active: true,
         },
         {
-          name: "Snacks Naturales",
+          name: "Carne / Naturales",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
           is_active: true,
         },
         {
-          name: "Congelados en Seco",
+          name: "Congelados en Seco / Naturales",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
           is_active: true,
         },
         {
           name: "Blandos y Masticables",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
           is_active: true,
         },
         {
-          name: "Galletas para Perros",
+          name: "Galletas",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
           is_active: true,
         },
         {
-          name: "Snacks Larga Duración",
+          name: "Larga Duración",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
           is_active: true,
         },
         {
           name: "Higiene Dental",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
           is_active: true,
         },
         // Perro - Juguetes
         {
-          name: "Juguetes para Morder y Tirar",
+          name: "Morder y Tirar",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
           is_active: true,
         },
         {
-          name: "Peluches para Perros",
+          name: "Peluches",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
           is_active: true,
         },
         {
           name: "Juguetes para Recuperar",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
           is_active: true,
         },
         {
           name: "Dispensadores de Premios",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
           is_active: true,
         },
         {
-          name: "Rompecabezas para Perros",
+          name: "Rompecabezas",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
           is_active: true,
         },
         // Perro - Accesorios
         {
-          name: "Camas para Perros",
+          name: "Camas",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
           is_active: true,
         },
         {
-          name: "Platos y Bowls",
+          name: "Platos, Bowls",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
           is_active: true,
         },
         {
-          name: "Correas para Perros",
+          name: "Correas",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
           is_active: true,
         },
         {
           name: "Collares y Arneses",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
           is_active: true,
         },
         {
-          name: "Accesorios de Adiestramiento",
+          name: "Adiestramiento",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
           is_active: true,
         },
         {
-          name: "Recintos y Jaulas",
+          name: "Recintos, Jaulas, Transporte",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
           is_active: true,
         },
-        // Perro - Higiene
+        // Perro - Higiene y Baño
         {
-          name: "Toallitas de Limpieza",
-          is_active: true,
-        },
-        {
-          name: "Pads de Entrenamiento",
-          is_active: true,
-        },
-        {
-          name: "Bolsas para Desechos",
+          name: "Toallitas limpieza",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
           is_active: true,
         },
         {
-          name: "Pañales para Perros",
+          name: "Pads de entrenamiento",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
+          is_active: true,
+        },
+        {
+          name: "Bolsas",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
+          is_active: true,
+        },
+        {
+          name: "Pañales",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
           is_active: true,
         },
         // Perro - Peluquería
         {
-          name: "Cepillos para Perros",
+          name: "Cepillos",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
           is_active: true,
         },
         {
           name: "Shampoos y Acondicionadores",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
           is_active: true,
         },
         {
           name: "Corta Uñas y Herramientas",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
           is_active: true,
         },
         {
-          name: "Skin Care para Perros",
+          name: "Skin Care",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
           is_active: true,
         },
         // Perro - Farmacia
         {
           name: "Pulgas y Garrapatas",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
           is_active: true,
         },
         {
           name: "Vitaminas y Suplementos",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
           is_active: true,
         },
         {
           name: "Alergias y Picazón",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
           is_active: true,
         },
         {
           name: "Control de Temperatura",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
           is_active: true,
         },
         {
-          name: "Medicamentos para Perros",
-          is_active: true,
-        },
-        // Gato - Comida
-        {
-          name: "Comida Seca para Gatos",
-          is_active: true,
-        },
-        {
-          name: "Comida Húmeda para Gatos",
-          is_active: true,
-        },
-        {
-          name: "Comida Medicada para Gatos",
-          is_active: true,
-        },
-        {
-          name: "Dietas Especiales para Gatos",
-          is_active: true,
-        },
-        // Gato - Higiene
-        {
-          name: "Arena para Gatos",
-          is_active: true,
-        },
-        {
-          name: "Toallitas para Gatos",
-          is_active: true,
-        },
-        // Gato - Snacks
-        {
-          name: "Snacks Blandos para Gatos",
-          is_active: true,
-        },
-        {
-          name: "Snacks Crujientes para Gatos",
-          is_active: true,
-        },
-        {
-          name: "Hierba Gatera",
-          is_active: true,
-        },
-        // Gato - Árboles y Rascadores
-        {
-          name: "Árboles y Casas para Gatos",
-          is_active: true,
-        },
-        {
-          name: "Rascadores para Gatos",
-          is_active: true,
-        },
-        // Gato - Juguetes
-        {
-          name: "Juguetes Interactivos para Gatos",
-          is_active: true,
-        },
-        {
-          name: "Catnip",
-          is_active: true,
-        },
-        {
-          name: "Varitas y Pelotas",
-          is_active: true,
-        },
-        {
-          name: "Peluches para Gatos",
-          is_active: true,
-        },
-        // Gato - Accesorios
-        {
-          name: "Cajas de Arena",
-          is_active: true,
-        },
-        {
-          name: "Camas para Gatos",
-          is_active: true,
-        },
-        {
-          name: "Collares y Arneses para Gatos",
-          is_active: true,
-        },
-        {
-          name: "Recintos para Gatos",
-          is_active: true,
-        },
-        {
-          name: "Platos y Bowls para Gatos",
-          is_active: true,
-        },
-        // Gato - Peluquería
-        {
-          name: "Cepillos para Gatos",
-          is_active: true,
-        },
-        {
-          name: "Shampoos para Gatos",
-          is_active: true,
-        },
-        {
-          name: "Corta Uñas para Gatos",
-          is_active: true,
-        },
-        {
-          name: "Skin Care para Gatos",
-          is_active: true,
-        },
-        // Gato - Farmacia
-        {
-          name: "Pulgas y Garrapatas para Gatos",
-          is_active: true,
-        },
-        {
-          name: "Vitaminas para Gatos",
-          is_active: true,
-        },
-        {
-          name: "Alergias para Gatos",
-          is_active: true,
-        },
-        {
-          name: "Medicamentos para Gatos",
+          name: "Medicamentos",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Perro")!.id,
           is_active: true,
         },
       ],
     },
   });
+
+  // Crear subcategorías para Gatos
+  const { result: gatoSubCategories } = await createProductCategoriesWorkflow(
+    container
+  ).run({
+    input: {
+      product_categories: [
+        // Gato - Comida
+        {
+          name: "Comida Seca",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Gato")!.id,
+          is_active: true,
+        },
+        {
+          name: "Comida Húmeda",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Gato")!.id,
+          is_active: true,
+        },
+        {
+          name: "Comida Medicada",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Gato")!.id,
+          is_active: true,
+        },
+        {
+          name: "Dietas Especiales",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Gato")!.id,
+          is_active: true,
+        },
+        // Gato - Higiene y Baño
+        {
+          name: "Arena",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Gato")!.id,
+          is_active: true,
+        },
+        {
+          name: "Toallitas limpieza",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Gato")!.id,
+          is_active: true,
+        },
+        // Gato - Snacks y Premios
+        {
+          name: "Blandos y Masticables",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Gato")!.id,
+          is_active: true,
+        },
+        {
+          name: "Crujientes",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Gato")!.id,
+          is_active: true,
+        },
+        {
+          name: "Hierba Gatera",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Gato")!.id,
+          is_active: true,
+        },
+        // Gato - Árboles, Casas y Rascadores
+        {
+          name: "Árboles y Casas",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Gato")!.id,
+          is_active: true,
+        },
+        {
+          name: "Rascadores",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Gato")!.id,
+          is_active: true,
+        },
+        // Gato - Juguetes
+        {
+          name: "Interactivos",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Gato")!.id,
+          is_active: true,
+        },
+        {
+          name: "Catnip",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Gato")!.id,
+          is_active: true,
+        },
+        {
+          name: "Varitas y Pelotas",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Gato")!.id,
+          is_active: true,
+        },
+        {
+          name: "Peluches",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Gato")!.id,
+          is_active: true,
+        },
+        // Gato - Accesorios
+        {
+          name: "Cajas Arena",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Gato")!.id,
+          is_active: true,
+        },
+        {
+          name: "Camas",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Gato")!.id,
+          is_active: true,
+        },
+        {
+          name: "Collares y Arneses",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Gato")!.id,
+          is_active: true,
+        },
+        {
+          name: "Recintos, Jaulas, Transporte",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Gato")!.id,
+          is_active: true,
+        },
+        {
+          name: "Platos, Bowls",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Gato")!.id,
+          is_active: true,
+        },
+        // Gato - Peluquería
+        {
+          name: "Cepillos",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Gato")!.id,
+          is_active: true,
+        },
+        {
+          name: "Shampoos y Acondicionadores",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Gato")!.id,
+          is_active: true,
+        },
+        {
+          name: "Corta Uñas y Herramientas",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Gato")!.id,
+          is_active: true,
+        },
+        {
+          name: "Skin Care",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Gato")!.id,
+          is_active: true,
+        },
+        // Gato - Farmacia
+        {
+          name: "Pulgas y Garrapatas",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Gato")!.id,
+          is_active: true,
+        },
+        {
+          name: "Vitaminas y Suplementos",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Gato")!.id,
+          is_active: true,
+        },
+        {
+          name: "Alergias y Picazón",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Gato")!.id,
+          is_active: true,
+        },
+        {
+          name: "Control de Temperatura",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Gato")!.id,
+          is_active: true,
+        },
+        {
+          name: "Medicamentos",
+          parent_category_id: mainCategories.find((cat) => cat.name === "Gato")!.id,
+          is_active: true,
+        },
+      ],
+    },
+  });
+
+  // Combinar todas las categorías
+  const categoryResult = [...mainCategories, ...perroSubCategories, ...gatoSubCategories];
 
   logger.info("Seeding Chilean pet products...");
 
@@ -592,7 +692,7 @@ export default async function seedDemoData({ container }: ExecArgs) {
         {
           title: "Royal Canin Adulto Mediano",
           category_ids: [
-            categoryResult.find((cat) => cat.name === "Comida Seca para Perros")!.id,
+            categoryResult.find((cat) => cat.name === "Comida Seca")!.id,
           ],
           description:
             "Alimento completo para perros adultos de razas medianas. Formulado con proteínas de alta calidad y nutrientes esenciales para mantener la salud óptima de tu mascota.",
@@ -674,7 +774,7 @@ export default async function seedDemoData({ container }: ExecArgs) {
         {
           title: "Pedigree Carne en Salsa",
           category_ids: [
-            categoryResult.find((cat) => cat.name === "Comida Húmeda para Perros")!.id,
+            categoryResult.find((cat) => cat.name === "Comida Húmeda")!.id,
           ],
           description:
             "Comida húmeda para perros adultos con carne en salsa. Rica en proteínas y vitaminas esenciales para una alimentación completa y balanceada.",
@@ -739,7 +839,7 @@ export default async function seedDemoData({ container }: ExecArgs) {
         {
           title: "Whiskas Adulto",
           category_ids: [
-            categoryResult.find((cat) => cat.name === "Comida Seca para Gatos")!.id,
+            categoryResult.find((cat) => cat.name === "Comida Seca" && cat.parent_category_id === mainCategories.find((cat) => cat.name === "Gato")!.id)!.id,
           ],
           description:
             "Alimento completo para gatos adultos. Formulado con proteínas de alta calidad y nutrientes esenciales para mantener la salud y vitalidad de tu gato.",
@@ -804,7 +904,7 @@ export default async function seedDemoData({ container }: ExecArgs) {
         {
           title: "Arena Sanitaria Premium",
           category_ids: [
-            categoryResult.find((cat) => cat.name === "Arena para Gatos")!.id,
+            categoryResult.find((cat) => cat.name === "Arena")!.id,
           ],
           description:
             "Arena sanitaria premium con control de olores. Absorbente y fácil de limpiar. Ideal para mantener la higiene de tu gato.",
@@ -869,7 +969,7 @@ export default async function seedDemoData({ container }: ExecArgs) {
         {
           title: "Pelota de Caucho Natural",
           category_ids: [
-            categoryResult.find((cat) => cat.name === "Juguetes para Morder y Tirar")!.id,
+            categoryResult.find((cat) => cat.name === "Morder y Tirar")!.id,
           ],
           description:
             "Pelota de caucho natural resistente para perros. Ideal para jugar, morder y hacer ejercicio. Fácil de limpiar y duradera.",
@@ -919,6 +1019,153 @@ export default async function seedDemoData({ container }: ExecArgs) {
                 },
                 {
                   amount: 12,
+                  currency_code: "usd",
+                },
+              ],
+            },
+          ],
+          sales_channels: [
+            {
+              id: defaultSalesChannel[0].id,
+            },
+          ],
+        },
+        // Producto ejemplo: Cama para Perros
+        {
+          title: "Cama Ortopédica Premium",
+          category_ids: [
+            categoryResult.find((cat) => cat.name === "Camas")!.id,
+          ],
+          description:
+            "Cama ortopédica premium para perros de todas las edades. Con memoria viscoelástica y funda desmontable. Ideal para perros con problemas articulares.",
+          handle: "cama-ortopedica-premium",
+          weight: 2000,
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
+          images: [
+            {
+              url: "https://via.placeholder.com/400x400/795548/FFFFFF?text=Cama+Ortopedica",
+            },
+          ],
+          options: [
+            {
+              title: "Tamaño",
+              values: ["S", "M", "L", "XL"],
+            },
+          ],
+          variants: [
+            {
+              title: "S (40x30cm)",
+              sku: "CAMA-ORTO-S",
+              options: {
+                Tamaño: "S",
+              },
+              prices: [
+                {
+                  amount: 45000, // $45,000 CLP
+                  currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase(),
+                },
+                {
+                  amount: 45,
+                  currency_code: "usd",
+                },
+              ],
+            },
+            {
+              title: "M (60x40cm)",
+              sku: "CAMA-ORTO-M",
+              options: {
+                Tamaño: "M",
+              },
+              prices: [
+                {
+                  amount: 65000,
+                  currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase(),
+                },
+                {
+                  amount: 65,
+                  currency_code: "usd",
+                },
+              ],
+            },
+            {
+              title: "L (80x50cm)",
+              sku: "CAMA-ORTO-L",
+              options: {
+                Tamaño: "L",
+              },
+              prices: [
+                {
+                  amount: 85000,
+                  currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase(),
+                },
+                {
+                  amount: 85,
+                  currency_code: "usd",
+                },
+              ],
+            },
+          ],
+          sales_channels: [
+            {
+              id: defaultSalesChannel[0].id,
+            },
+          ],
+        },
+        // Producto ejemplo: Rascador para Gatos
+        {
+          title: "Rascador Torre Premium",
+          category_ids: [
+            categoryResult.find((cat) => cat.name === "Rascadores")!.id,
+          ],
+          description:
+            "Rascador torre premium para gatos con múltiples niveles. Incluye plataformas, cuevas y juguetes colgantes. Ideal para gatos activos.",
+          handle: "rascador-torre-premium",
+          weight: 15000,
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
+          images: [
+            {
+              url: "https://via.placeholder.com/400x400/8D6E63/FFFFFF?text=Rascador+Torre",
+            },
+          ],
+          options: [
+            {
+              title: "Altura",
+              values: ["120cm", "150cm", "180cm"],
+            },
+          ],
+          variants: [
+            {
+              title: "120cm",
+              sku: "RASCADOR-TORRE-120",
+              options: {
+                Altura: "120cm",
+              },
+              prices: [
+                {
+                  amount: 120000, // $120,000 CLP
+                  currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase(),
+                },
+                {
+                  amount: 120,
+                  currency_code: "usd",
+                },
+              ],
+            },
+            {
+              title: "150cm",
+              sku: "RASCADOR-TORRE-150",
+              options: {
+                Altura: "150cm",
+              },
+              prices: [
+                {
+                  amount: 150000,
+                  currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase(),
+                },
+                {
+                  amount: 150,
                   currency_code: "usd",
                 },
               ],
