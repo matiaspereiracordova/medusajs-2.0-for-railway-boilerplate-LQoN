@@ -29,7 +29,7 @@ try {
 
   // Run the seed command
   console.log('🌱 Running database seed...');
-  execSync('npm run seed', { 
+  execSync('npx medusa exec ./src/scripts/seed.ts', { 
     stdio: 'inherit',
     cwd: __dirname,
     env: { ...process.env, NODE_ENV: 'production' }
