@@ -8,7 +8,8 @@ export default async function productCreatedHandler({
   container,
 }: SubscriberArgs<{ id: string }>) {
   const productId = data.id
-  console.log(`🔄 Producto creado detectado: ${productId}`)
+  const timestamp = new Date().toISOString()
+  console.log(`[${timestamp}] 🔄 SUBSCRIBER: Producto creado detectado - ID: ${productId}`)
 
   try {
     // Obtener el producto recién creado
@@ -20,9 +21,11 @@ export default async function productCreatedHandler({
       relations: ["variants", "categories", "tags", "images"],
     })
 
-    console.log(`📦 Sincronizando producto "${product.title}" con Odoo...`)
+    console.log(`[${timestamp}] 📦 SUBSCRIBER: Producto obtenido - "${product.title}" (${product.status})`)
+    console.log(`[${timestamp}] 📦 SUBSCRIBER: Variants: ${product.variants?.length || 0}, Images: ${product.images?.length || 0}`)
 
     // Ejecutar sincronización solo para este producto
+    console.log(`[${timestamp}] 🚀 SUBSCRIBER: Iniciando sincronización con Odoo...`)
     const result = await syncToOdooWorkflow(container).run({
       input: {
         productIds: [productId],
@@ -31,20 +34,22 @@ export default async function productCreatedHandler({
       },
     })
 
-    console.log(`✅ Sincronización automática completada para "${product.title}":`)
-    console.log(`   - Productos sincronizados: ${result.result.syncedProducts}`)
-    console.log(`   - Productos creados: ${result.result.createdProducts}`)
-    console.log(`   - Productos actualizados: ${result.result.updatedProducts}`)
-    console.log(`   - Errores: ${result.result.errorCount}`)
+    console.log(`[${timestamp}] ✅ SUBSCRIBER: Sincronización completada para "${product.title}":`)
+    console.log(`[${timestamp}]    - Productos sincronizados: ${result.result.syncedProducts}`)
+    console.log(`[${timestamp}]    - Productos creados: ${result.result.createdProducts}`)
+    console.log(`[${timestamp}]    - Productos actualizados: ${result.result.updatedProducts}`)
+    console.log(`[${timestamp}]    - Errores: ${result.result.errorCount}`)
 
     if (result.result.errors && result.result.errors.length > 0) {
-      console.log(`❌ Errores en sincronización automática:`)
+      console.log(`[${timestamp}] ❌ SUBSCRIBER: Errores en sincronización:`)
       result.result.errors.forEach((err: any) => {
-        console.log(`   - ${err.product} (${err.medusaId}): ${err.error}`)
+        console.log(`[${timestamp}]    - ${err.product} (${err.medusaId}): ${err.error}`)
       })
+    } else {
+      console.log(`[${timestamp}] 🎉 SUBSCRIBER: Producto "${product.title}" sincronizado exitosamente con Odoo`)
     }
   } catch (error) {
-    console.error(`❌ Error en sincronización automática del producto ${productId}:`, error)
+    console.error(`[${timestamp}] ❌ SUBSCRIBER: Error en sincronización del producto ${productId}:`, error)
   }
 }
 
