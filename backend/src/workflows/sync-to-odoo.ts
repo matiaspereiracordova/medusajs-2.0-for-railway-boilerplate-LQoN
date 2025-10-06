@@ -326,7 +326,7 @@ const transformProductsStep = createStep(
           list_price: productPrice,
           x_medusa_id: product.id, // Campo personalizado para almacenar ID de Medusa
           description: product.description || "",
-          active: product.status === "published",
+          active: product.status === "published", // Solo productos published serán activos en Odoo
           image_1920: productImageBase64, // Imagen principal del producto en base64
         }
 
