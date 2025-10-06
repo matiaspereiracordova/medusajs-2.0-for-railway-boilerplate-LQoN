@@ -15,7 +15,7 @@ async function postDeploySeed() {
       console.log("🌍 Production environment detected, running seed...");
       
       // Execute seed
-      await seedDemoData({ container });
+      await seedDemoData({ container, args: [] });
       
       console.log("✅ Post-deploy seed completed successfully!");
     } else {

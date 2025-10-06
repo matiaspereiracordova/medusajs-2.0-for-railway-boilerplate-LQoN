@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { Request, Response } from "express";
 import { createMedusaContainer } from "@medusajs/framework";
 import seedDemoData from "../../../scripts/seed";
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request, res: Response) {
   try {
     console.log("🌱 Starting seed execution...");
     
@@ -10,30 +10,29 @@ export async function POST(req: NextRequest) {
     const container = createMedusaContainer();
     
     // Execute seed
-    await seedDemoData({ container });
+    await seedDemoData({ container, args: [] });
     
     console.log("✅ Seed execution completed successfully!");
     
-    return NextResponse.json({ 
+    res.json({ 
       success: true, 
       message: "Seed executed successfully!",
       timestamp: new Date().toISOString()
     });
   } catch (error) {
     console.error("❌ Error executing seed:", error);
-    return NextResponse.json(
+    res.status(500).json(
       { 
         success: false, 
         error: error instanceof Error ? error.message : "Unknown error",
         timestamp: new Date().toISOString()
-      },
-      { status: 500 }
+      }
     );
   }
 }
 
-export async function GET(req: NextRequest) {
-  return NextResponse.json({ 
+export async function GET(req: Request, res: Response) {
+  res.json({ 
     message: "Seed endpoint ready. Use POST to execute seed.",
     timestamp: new Date().toISOString()
   });
