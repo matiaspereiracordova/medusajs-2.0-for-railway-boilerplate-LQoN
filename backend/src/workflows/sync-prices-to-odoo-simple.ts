@@ -120,7 +120,7 @@ const syncPricesStep = createStep(
               const anyPrice = variantPrices[0]
               
               const selectedPrice = clpPrice || usdPrice || anyPrice
-              basePrice = selectedPrice.amount / 100
+              basePrice = Number(selectedPrice.amount) / 100
             }
           }
 
@@ -169,10 +169,10 @@ const syncPricesStep = createStep(
 
               if (variantPrice) {
                 await odooClient.update("product.product", odooVariant.id, {
-                  list_price: variantPrice.amount / 100
+                  list_price: Number(variantPrice.amount) / 100
                 })
                 
-                console.log(`[${timestamp}] ✅ PRICE-SYNC: Variant ${variant.title} precio actualizado: $${variantPrice.amount / 100}`)
+                console.log(`[${timestamp}] ✅ PRICE-SYNC: Variant ${variant.title} precio actualizado: $${Number(variantPrice.amount) / 100}`)
                 syncedVariants++
                 syncedPrices++
               }
@@ -228,15 +228,14 @@ const syncPricesStep = createStep(
 const syncPricesToOdooWorkflow = createWorkflow(
   "sync-prices-to-odoo",
   function (input) {
-    const { syncedProducts, syncedVariants, syncedPrices, errorCount, errors, totalPricesInSystem } = syncPricesStep(input)
+    const { syncedProducts, syncedVariants, syncedPrices, errorCount, errors } = syncPricesStep(input)
 
     return new WorkflowResponse({
       syncedProducts,
       syncedVariants,
       syncedPrices,
       errorCount,
-      errors,
-      totalPricesInSystem
+      errors
     })
   }
 )
