@@ -30,16 +30,16 @@ export async function GET(
 
     if (id) {
       console.log(`🔍 Buscando producto por ID: ${id}`)
-      const product = await productModuleService.retrieveProduct(id, {
-        relations: ["variants", "variants.options", "options", "images"],
-      })
+    const product = await productModuleService.retrieveProduct(id, {
+      relations: ["variants", "variants.options", "variants.prices", "options", "images"],
+    })
       products = [product]
     } else {
       console.log(`🔍 Buscando productos con título: "${title}"`)
       const allProducts = await productModuleService.listProducts(
         {},
         {
-          relations: ["variants", "variants.options", "options", "images"],
+          relations: ["variants", "variants.options", "variants.prices", "options", "images"],
           take: 100,
         }
       )

@@ -198,7 +198,7 @@ const getMedusaProductsStep = createStep(
         products = await Promise.all(
           productIds.map((id) =>
             productModuleService.retrieveProduct(id, {
-              relations: ["variants", "variants.options", "categories", "tags", "images"],
+              relations: ["variants", "variants.options", "variants.prices", "categories", "tags", "images"],
               // Intentar incluir contexto de región para calculated_price
               ...(region && { region_id: region.id })
             })
@@ -209,7 +209,7 @@ const getMedusaProductsStep = createStep(
         products = await productModuleService.listProducts(
           {},
           {
-            relations: ["variants", "variants.options", "categories", "tags", "images"],
+            relations: ["variants", "variants.options", "variants.prices", "categories", "tags", "images"],
             take: limit,
             skip: offset,
             // Intentar incluir contexto de región para calculated_price
@@ -482,7 +482,7 @@ const syncProductsToOdooStep = createStep(
             
             // Sincronizar precios de variantes
             console.log(`💰 Sincronizando precios de variantes para ${odooProductData.name}...`)
-            await odooModuleService.syncVariantPrices(variantData)
+            await odooModuleService.syncVariantPrices(finalOdooProductId, variantData)
             console.log(`✅ Precios de variantes sincronizados para ${odooProductData.name}`)
           } catch (variantError: any) {
             console.error(`⚠️ Error sincronizando variantes para ${odooProductData.name}:`, variantError.message)

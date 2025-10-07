@@ -425,9 +425,43 @@ export default class OdooModuleService {
   }
 
   /**
+   * Actualiza el precio principal del producto template en Odoo
+   */
+  async updateProductTemplatePrice(productTemplateId: number, price: number, currencyCode: string = 'CLP'): Promise<void> {
+    await this.login()
+
+    try {
+      console.log(`💰 Actualizando precio principal del producto ${productTemplateId}: ${price} ${currencyCode}`)
+      
+      await this.client.request("call", {
+        service: "object",
+        method: "execute_kw",
+        args: [
+          this.options.dbName,
+          this.uid,
+          this.options.apiKey,
+          "product.template",
+          "write",
+          [
+            [productTemplateId],
+            {
+              list_price: price,
+            }
+          ],
+        ],
+      })
+
+      console.log(`✅ Precio principal actualizado para producto ${productTemplateId}`)
+    } catch (error: any) {
+      console.error(`❌ Error actualizando precio principal del producto ${productTemplateId}:`, error)
+      throw error
+    }
+  }
+
+  /**
    * Sincroniza precios de variantes desde Medusa a Odoo
    */
-  async syncVariantPrices(variants: Array<{ 
+  async syncVariantPrices(productTemplateId: number, variants: Array<{ 
     id: string; 
     title: string; 
     sku: string; 
@@ -438,22 +472,15 @@ export default class OdooModuleService {
     try {
       console.log(`💰 Sincronizando precios de ${variants.length} variantes...`)
 
+      let mainProductPrice = 0
+      let hasValidPrice = false
+
       for (const variant of variants) {
         if (!variant.prices || variant.prices.length === 0) {
           console.log(`⚠️ No hay precios para la variante ${variant.sku}`)
           continue
         }
 
-        // Buscar la variante en Odoo por SKU
-        const odooVariants = await this.findVariantBySku(variant.sku)
-        
-        if (odooVariants.length === 0) {
-          console.log(`⚠️ No se encontró la variante ${variant.sku} en Odoo`)
-          continue
-        }
-
-        const odooVariant = odooVariants[0]
-        
         // Obtener el precio en CLP (prioridad) o la primera moneda disponible
         const clpPrice = variant.prices.find((p: any) => p.currency_code === 'clp')
         const usdPrice = variant.prices.find((p: any) => p.currency_code === 'usd')
@@ -464,8 +491,27 @@ export default class OdooModuleService {
 
         console.log(`💰 Precio para ${variant.sku}: ${priceAmount} ${selectedPrice.currency_code}`)
 
-        // Actualizar el precio en Odoo
-        await this.updateVariantPrice(odooVariant.id, priceAmount, selectedPrice.currency_code)
+        // Usar el primer precio válido como precio principal del producto
+        if (!hasValidPrice) {
+          mainProductPrice = priceAmount
+          hasValidPrice = true
+          console.log(`💰 Estableciendo precio principal del producto: ${mainProductPrice} ${selectedPrice.currency_code}`)
+        }
+
+        // Buscar la variante en Odoo por SKU para actualizar su precio específico
+        const odooVariants = await this.findVariantBySku(variant.sku)
+        
+        if (odooVariants.length > 0) {
+          const odooVariant = odooVariants[0]
+          await this.updateVariantPrice(odooVariant.id, priceAmount, selectedPrice.currency_code)
+        } else {
+          console.log(`⚠️ No se encontró la variante ${variant.sku} en Odoo, solo actualizando precio principal`)
+        }
+      }
+
+      // Actualizar el precio principal del producto template
+      if (hasValidPrice) {
+        await this.updateProductTemplatePrice(productTemplateId, mainProductPrice)
       }
 
       console.log(`✅ Precios de variantes sincronizados exitosamente`)
