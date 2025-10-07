@@ -685,497 +685,586 @@ export default async function seedDemoData({ container }: ExecArgs) {
 
   logger.info("Seeding Chilean pet products...");
 
+  // Función helper para generar precio aleatorio en CLP
+  const randomPrice = (min: number, max: number) => {
+    return Math.floor(Math.random() * (max - min + 1) + min);
+  };
+
   const { result: productResult } = await createProductsWorkflow(container).run({
     input: {
       products: [
-        // Producto ejemplo: Comida Seca para Perros
+        // PERRO - Comida
         {
-          title: "Royal Canin Adulto Mediano",
-          category_ids: [
-            categoryResult.find((cat) => cat.name === "Comida Seca")!.id,
-          ],
-          description:
-            "Alimento completo para perros adultos de razas medianas. Formulado con proteínas de alta calidad y nutrientes esenciales para mantener la salud óptima de tu mascota.",
-          handle: "royal-canin-adulto-mediano",
-          weight: 15000, // 15kg
+          title: "Champion Dog Adulto",
+          category_ids: [categoryResult.find((cat) => cat.name === "Comida Seca" && cat.parent_category_id === mainCategories.find((c) => c.name === "Perro")!.id)!.id],
+          description: "Alimento balanceado para perros adultos con proteínas de alta calidad.",
+          handle: "champion-dog-adulto",
+          weight: 3000,
           status: ProductStatus.PUBLISHED,
           shipping_profile_id: shippingProfile.id,
-          images: [
-            {
-              url: "https://via.placeholder.com/400x400/4CAF50/FFFFFF?text=Royal+Canin+Adulto",
-            },
-          ],
-          options: [
-            {
-              title: "Peso",
-              values: ["3kg", "7.5kg", "15kg", "30kg"],
-            },
-          ],
-          variants: [
-            {
-              title: "3kg",
-              sku: "ROYAL-CANIN-ADULTO-3KG",
-              options: {
-                Peso: "3kg",
-              },
-              prices: [
-                {
-                  amount: 25000, // $25,000 CLP
-                  currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase(),
-                },
-                {
-                  amount: 25,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "7.5kg",
-              sku: "ROYAL-CANIN-ADULTO-7.5KG",
-              options: {
-                Peso: "7.5kg",
-              },
-              prices: [
-                {
-                  amount: 55000, // $55,000 CLP
-                  currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase(),
-                },
-                {
-                  amount: 55,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "15kg",
-              sku: "ROYAL-CANIN-ADULTO-15KG",
-              options: {
-                Peso: "15kg",
-              },
-              prices: [
-                {
-                  amount: 95000, // $95,000 CLP
-                  currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase(),
-                },
-                {
-                  amount: 95,
-                  currency_code: "usd",
-                },
-              ],
-            },
-          ],
-          sales_channels: [
-            {
-              id: defaultSalesChannel[0].id,
-            },
-          ],
+          images: [{url: "https://via.placeholder.com/400x400/4CAF50/FFFFFF?text=Champion+Dog"}],
+          variants: [{
+            title: "3kg",
+            sku: "DOG-COMIDA-SECA-001",
+            prices: [{amount: randomPrice(15000, 35000), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 25, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
         },
-        // Producto ejemplo: Comida Húmeda para Perros
         {
-          title: "Pedigree Carne en Salsa",
-          category_ids: [
-            categoryResult.find((cat) => cat.name === "Comida Húmeda")!.id,
-          ],
-          description:
-            "Comida húmeda para perros adultos con carne en salsa. Rica en proteínas y vitaminas esenciales para una alimentación completa y balanceada.",
-          handle: "pedigree-carne-salsa",
-          weight: 400, // 400g
+          title: "Pedigree Pouch Carne",
+          category_ids: [categoryResult.find((cat) => cat.name === "Comida Húmeda" && cat.parent_category_id === mainCategories.find((c) => c.name === "Perro")!.id)!.id],
+          description: "Comida húmeda en sobre con trozos de carne en salsa.",
+          handle: "pedigree-pouch-carne",
+          weight: 100,
           status: ProductStatus.PUBLISHED,
           shipping_profile_id: shippingProfile.id,
-          images: [
-            {
-              url: "https://via.placeholder.com/400x400/FF9800/FFFFFF?text=Pedigree+Carne",
-            },
-          ],
-          options: [
-            {
-              title: "Sabor",
-              values: ["Carne", "Pollo", "Pavo", "Cordero"],
-            },
-          ],
-          variants: [
-            {
-              title: "Carne",
-              sku: "PEDIGREE-CARNE-400G",
-              options: {
-                Sabor: "Carne",
-              },
-              prices: [
-                {
-                  amount: 3500, // $3,500 CLP
-                  currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase(),
-                },
-                {
-                  amount: 3.5,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "Pollo",
-              sku: "PEDIGREE-POLLO-400G",
-              options: {
-                Sabor: "Pollo",
-              },
-              prices: [
-                {
-                  amount: 3500,
-                  currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase(),
-                },
-                {
-                  amount: 3.5,
-                  currency_code: "usd",
-                },
-              ],
-            },
-          ],
-          sales_channels: [
-            {
-              id: defaultSalesChannel[0].id,
-            },
-          ],
+          images: [{url: "https://via.placeholder.com/400x400/FF9800/FFFFFF?text=Pedigree+Pouch"}],
+          variants: [{
+            title: "100g",
+            sku: "DOG-COMIDA-HUMEDA-001",
+            prices: [{amount: randomPrice(1500, 3500), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 3, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
         },
-        // Producto ejemplo: Comida Seca para Gatos
         {
-          title: "Whiskas Adulto",
-          category_ids: [
-            categoryResult.find((cat) => cat.name === "Comida Seca" && cat.parent_category_id === mainCategories.find((cat) => cat.name === "Gato")!.id)!.id,
-          ],
-          description:
-            "Alimento completo para gatos adultos. Formulado con proteínas de alta calidad y nutrientes esenciales para mantener la salud y vitalidad de tu gato.",
-          handle: "whiskas-adulto",
-          weight: 3200, // 3.2kg
+          title: "Hills Prescription Diet i/d",
+          category_ids: [categoryResult.find((cat) => cat.name === "Comida Medicada" && cat.parent_category_id === mainCategories.find((c) => c.name === "Perro")!.id)!.id],
+          description: "Alimento veterinario para problemas digestivos en perros.",
+          handle: "hills-prescription-id",
+          weight: 8000,
           status: ProductStatus.PUBLISHED,
           shipping_profile_id: shippingProfile.id,
-          images: [
-            {
-              url: "https://via.placeholder.com/400x400/9C27B0/FFFFFF?text=Whiskas+Adulto",
-            },
-          ],
-          options: [
-            {
-              title: "Peso",
-              values: ["1kg", "3.2kg", "10kg"],
-            },
-          ],
-          variants: [
-            {
-              title: "1kg",
-              sku: "WHISKAS-ADULTO-1KG",
-              options: {
-                Peso: "1kg",
-              },
-              prices: [
-                {
-                  amount: 8500, // $8,500 CLP
-                  currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase(),
-                },
-                {
-                  amount: 8.5,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "3.2kg",
-              sku: "WHISKAS-ADULTO-3.2KG",
-              options: {
-                Peso: "3.2kg",
-              },
-              prices: [
-                {
-                  amount: 22000, // $22,000 CLP
-                  currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase(),
-                },
-                {
-                  amount: 22,
-                  currency_code: "usd",
-                },
-              ],
-            },
-          ],
-          sales_channels: [
-            {
-              id: defaultSalesChannel[0].id,
-            },
-          ],
+          images: [{url: "https://via.placeholder.com/400x400/2196F3/FFFFFF?text=Hills+i/d"}],
+          variants: [{
+            title: "8kg",
+            sku: "DOG-COMIDA-MED-001",
+            prices: [{amount: randomPrice(45000, 75000), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 68, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
         },
-        // Producto ejemplo: Arena para Gatos
         {
-          title: "Arena Sanitaria Premium",
-          category_ids: [
-            categoryResult.find((cat) => cat.name === "Arena")!.id,
-          ],
-          description:
-            "Arena sanitaria premium con control de olores. Absorbente y fácil de limpiar. Ideal para mantener la higiene de tu gato.",
-          handle: "arena-sanitaria-premium",
-          weight: 10000, // 10kg
+          title: "Royal Canin Hypoallergenic",
+          category_ids: [categoryResult.find((cat) => cat.name === "Dietas Especiales" && cat.parent_category_id === mainCategories.find((c) => c.name === "Perro")!.id)!.id],
+          description: "Dieta hipoalergénica para perros con sensibilidades alimentarias.",
+          handle: "royal-canin-hypoallergenic",
+          weight: 7500,
           status: ProductStatus.PUBLISHED,
           shipping_profile_id: shippingProfile.id,
-          images: [
-            {
-              url: "https://via.placeholder.com/400x400/607D8B/FFFFFF?text=Arena+Premium",
-            },
-          ],
-          options: [
-            {
-              title: "Peso",
-              values: ["4kg", "10kg", "20kg"],
-            },
-          ],
-          variants: [
-            {
-              title: "4kg",
-              sku: "ARENA-PREMIUM-4KG",
-              options: {
-                Peso: "4kg",
-              },
-              prices: [
-                {
-                  amount: 12000, // $12,000 CLP
-                  currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase(),
-                },
-                {
-                  amount: 12,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "10kg",
-              sku: "ARENA-PREMIUM-10KG",
-              options: {
-                Peso: "10kg",
-              },
-              prices: [
-                {
-                  amount: 25000, // $25,000 CLP
-                  currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase(),
-                },
-                {
-                  amount: 25,
-                  currency_code: "usd",
-                },
-              ],
-            },
-          ],
-          sales_channels: [
-            {
-              id: defaultSalesChannel[0].id,
-            },
-          ],
+          images: [{url: "https://via.placeholder.com/400x400/9C27B0/FFFFFF?text=RC+Hypo"}],
+          variants: [{
+            title: "7.5kg",
+            sku: "DOG-DIETA-ESP-001",
+            prices: [{amount: randomPrice(55000, 85000), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 78, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
         },
-        // Producto ejemplo: Juguete para Perros
+
+        // PERRO - Snacks y Premios
         {
-          title: "Pelota de Caucho Natural",
-          category_ids: [
-            categoryResult.find((cat) => cat.name === "Morder y Tirar")!.id,
-          ],
-          description:
-            "Pelota de caucho natural resistente para perros. Ideal para jugar, morder y hacer ejercicio. Fácil de limpiar y duradera.",
-          handle: "pelota-caucho-natural",
+          title: "Bully Stick Natural 12\"",
+          category_ids: [categoryResult.find((cat) => cat.name === "Huesos, Bully Sticks / Naturales")!.id],
+          description: "Bully stick 100% natural, ideal para limpieza dental.",
+          handle: "bully-stick-12",
+          weight: 150,
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
+          images: [{url: "https://via.placeholder.com/400x400/795548/FFFFFF?text=Bully+Stick"}],
+          variants: [{
+            title: "12 pulgadas",
+            sku: "DOG-SNACK-BULLY-001",
+            prices: [{amount: randomPrice(3500, 7500), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 6, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
+        },
+        {
+          title: "Tiras de Pollo Deshidratado",
+          category_ids: [categoryResult.find((cat) => cat.name === "Carne / Naturales")!.id],
+          description: "Tiras de pechuga de pollo 100% natural deshidratado.",
+          handle: "tiras-pollo-deshidratado",
           weight: 200,
           status: ProductStatus.PUBLISHED,
           shipping_profile_id: shippingProfile.id,
-          images: [
-            {
-              url: "https://via.placeholder.com/400x400/E91E63/FFFFFF?text=Pelota+Caucho",
-            },
-          ],
-          options: [
-            {
-              title: "Tamaño",
-              values: ["Pequeña", "Mediana", "Grande"],
-            },
-          ],
-          variants: [
-            {
-              title: "Pequeña",
-              sku: "PELOTA-CAUCHO-PEQ",
-              options: {
-                Tamaño: "Pequeña",
-              },
-              prices: [
-                {
-                  amount: 8500, // $8,500 CLP
-                  currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase(),
-                },
-                {
-                  amount: 8.5,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "Mediana",
-              sku: "PELOTA-CAUCHO-MED",
-              options: {
-                Tamaño: "Mediana",
-              },
-              prices: [
-                {
-                  amount: 12000,
-                  currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase(),
-                },
-                {
-                  amount: 12,
-                  currency_code: "usd",
-                },
-              ],
-            },
-          ],
-          sales_channels: [
-            {
-              id: defaultSalesChannel[0].id,
-            },
-          ],
+          images: [{url: "https://via.placeholder.com/400x400/FF5722/FFFFFF?text=Pollo+Seco"}],
+          variants: [{
+            title: "200g",
+            sku: "DOG-SNACK-CARNE-001",
+            prices: [{amount: randomPrice(4500, 9500), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 8, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
         },
-        // Producto ejemplo: Cama para Perros
         {
-          title: "Cama Ortopédica Premium",
-          category_ids: [
-            categoryResult.find((cat) => cat.name === "Camas")!.id,
-          ],
-          description:
-            "Cama ortopédica premium para perros de todas las edades. Con memoria viscoelástica y funda desmontable. Ideal para perros con problemas articulares.",
-          handle: "cama-ortopedica-premium",
-          weight: 2000,
+          title: "Freeze Dried Beef Treats",
+          category_ids: [categoryResult.find((cat) => cat.name === "Congelados en Seco / Naturales")!.id],
+          description: "Premios de carne liofilizada, conservan todos los nutrientes.",
+          handle: "freeze-dried-beef",
+          weight: 100,
           status: ProductStatus.PUBLISHED,
           shipping_profile_id: shippingProfile.id,
-          images: [
-            {
-              url: "https://via.placeholder.com/400x400/795548/FFFFFF?text=Cama+Ortopedica",
-            },
-          ],
-          options: [
-            {
-              title: "Tamaño",
-              values: ["S", "M", "L", "XL"],
-            },
-          ],
-          variants: [
-            {
-              title: "S (40x30cm)",
-              sku: "CAMA-ORTO-S",
-              options: {
-                Tamaño: "S",
-              },
-              prices: [
-                {
-                  amount: 45000, // $45,000 CLP
-                  currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase(),
-                },
-                {
-                  amount: 45,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "M (60x40cm)",
-              sku: "CAMA-ORTO-M",
-              options: {
-                Tamaño: "M",
-              },
-              prices: [
-                {
-                  amount: 65000,
-                  currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase(),
-                },
-                {
-                  amount: 65,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "L (80x50cm)",
-              sku: "CAMA-ORTO-L",
-              options: {
-                Tamaño: "L",
-              },
-              prices: [
-                {
-                  amount: 85000,
-                  currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase(),
-                },
-                {
-                  amount: 85,
-                  currency_code: "usd",
-                },
-              ],
-            },
-          ],
-          sales_channels: [
-            {
-              id: defaultSalesChannel[0].id,
-            },
-          ],
+          images: [{url: "https://via.placeholder.com/400x400/E91E63/FFFFFF?text=Freeze+Dried"}],
+          variants: [{
+            title: "100g",
+            sku: "DOG-SNACK-FREEZE-001",
+            prices: [{amount: randomPrice(8500, 15000), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 13, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
         },
-        // Producto ejemplo: Rascador para Gatos
         {
-          title: "Rascador Torre Premium",
-          category_ids: [
-            categoryResult.find((cat) => cat.name === "Rascadores")!.id,
-          ],
-          description:
-            "Rascador torre premium para gatos con múltiples niveles. Incluye plataformas, cuevas y juguetes colgantes. Ideal para gatos activos.",
-          handle: "rascador-torre-premium",
-          weight: 15000,
+          title: "Premios Blandos Sabor Bacon",
+          category_ids: [categoryResult.find((cat) => cat.name === "Blandos y Masticables")!.id],
+          description: "Premios suaves ideales para entrenamiento, sabor bacon.",
+          handle: "premios-blandos-bacon",
+          weight: 300,
           status: ProductStatus.PUBLISHED,
           shipping_profile_id: shippingProfile.id,
-          images: [
-            {
-              url: "https://via.placeholder.com/400x400/8D6E63/FFFFFF?text=Rascador+Torre",
-            },
-          ],
-          options: [
-            {
-              title: "Altura",
-              values: ["120cm", "150cm", "180cm"],
-            },
-          ],
-          variants: [
-            {
-              title: "120cm",
-              sku: "RASCADOR-TORRE-120",
-              options: {
-                Altura: "120cm",
-              },
-              prices: [
-                {
-                  amount: 120000, // $120,000 CLP
-                  currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase(),
-                },
-                {
-                  amount: 120,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "150cm",
-              sku: "RASCADOR-TORRE-150",
-              options: {
-                Altura: "150cm",
-              },
-              prices: [
-                {
-                  amount: 150000,
-                  currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase(),
-                },
-                {
-                  amount: 150,
-                  currency_code: "usd",
-                },
-              ],
-            },
-          ],
-          sales_channels: [
-            {
-              id: defaultSalesChannel[0].id,
-            },
-          ],
+          images: [{url: "https://via.placeholder.com/400x400/FFC107/FFFFFF?text=Bacon+Treats"}],
+          variants: [{
+            title: "300g",
+            sku: "DOG-SNACK-BLANDO-001",
+            prices: [{amount: randomPrice(5500, 12000), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 10, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
+        },
+        {
+          title: "Galletas Croquetas Mix",
+          category_ids: [categoryResult.find((cat) => cat.name === "Galletas")!.id],
+          description: "Mix de galletas crujientes con diferentes sabores.",
+          handle: "galletas-croquetas-mix",
+          weight: 500,
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
+          images: [{url: "https://via.placeholder.com/400x400/CDDC39/FFFFFF?text=Galletas"}],
+          variants: [{
+            title: "500g",
+            sku: "DOG-SNACK-GALLETA-001",
+            prices: [{amount: randomPrice(4000, 8500), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 7, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
+        },
+        {
+          title: "Hueso de Nylon Larga Duración",
+          category_ids: [categoryResult.find((cat) => cat.name === "Larga Duración")!.id],
+          description: "Hueso sintético ultra resistente para perros masticadores intensos.",
+          handle: "hueso-nylon-larga-duracion",
+          weight: 250,
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
+          images: [{url: "https://via.placeholder.com/400x400/607D8B/FFFFFF?text=Nylon+Bone"}],
+          variants: [{
+            title: "Grande",
+            sku: "DOG-SNACK-LARGA-001",
+            prices: [{amount: randomPrice(8000, 16000), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 14, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
+        },
+        {
+          title: "Dental Sticks Menta",
+          category_ids: [categoryResult.find((cat) => cat.name === "Higiene Dental")!.id],
+          description: "Sticks dentales con sabor menta para limpieza y frescura.",
+          handle: "dental-sticks-menta",
+          weight: 400,
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
+          images: [{url: "https://via.placeholder.com/400x400/00BCD4/FFFFFF?text=Dental+Sticks"}],
+          variants: [{
+            title: "Pack 28 unidades",
+            sku: "DOG-SNACK-DENTAL-001",
+            prices: [{amount: randomPrice(10000, 18000), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 16, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
+        },
+
+        // PERRO - Juguetes
+        {
+          title: "Cuerda Algodón Multicolor",
+          category_ids: [categoryResult.find((cat) => cat.name === "Morder y Tirar")!.id],
+          description: "Cuerda resistente de algodón para juegos de tira y afloja.",
+          handle: "cuerda-algodon-multicolor",
+          weight: 300,
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
+          images: [{url: "https://via.placeholder.com/400x400/FF6F00/FFFFFF?text=Rope+Toy"}],
+          variants: [{
+            title: "Mediano",
+            sku: "DOG-JUG-MORDER-001",
+            prices: [{amount: randomPrice(5500, 12000), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 10, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
+        },
+        {
+          title: "Peluche Pato con Sonido",
+          category_ids: [categoryResult.find((cat) => cat.name === "Peluches")!.id],
+          description: "Peluche suave de pato con squeaker interno.",
+          handle: "peluche-pato-sonido",
+          weight: 150,
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
+          images: [{url: "https://via.placeholder.com/400x400/FDD835/FFFFFF?text=Duck+Plush"}],
+          variants: [{
+            title: "Mediano",
+            sku: "DOG-JUG-PELUCHE-001",
+            prices: [{amount: randomPrice(6500, 14000), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 12, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
+        },
+        {
+          title: "Pelota Tenis con Rebote",
+          category_ids: [categoryResult.find((cat) => cat.name === "Juguetes para Recuperar")!.id],
+          description: "Pelota de tenis de alta calidad para juegos de fetch.",
+          handle: "pelota-tenis-rebote",
+          weight: 60,
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
+          images: [{url: "https://via.placeholder.com/400x400/8BC34A/FFFFFF?text=Tennis+Ball"}],
+          variants: [{
+            title: "Pack 3 unidades",
+            sku: "DOG-JUG-RECUPERAR-001",
+            prices: [{amount: randomPrice(4500, 9500), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 8, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
+        },
+        {
+          title: "Kong Classic Rojo",
+          category_ids: [categoryResult.find((cat) => cat.name === "Dispensadores de Premios")!.id],
+          description: "Kong clásico rellenable para mantener entretenido a tu perro.",
+          handle: "kong-classic-rojo",
+          weight: 200,
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
+          images: [{url: "https://via.placeholder.com/400x400/F44336/FFFFFF?text=Kong"}],
+          variants: [{
+            title: "Mediano",
+            sku: "DOG-JUG-KONG-001",
+            prices: [{amount: randomPrice(12000, 22000), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 20, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
+        },
+        {
+          title: "Puzzle Interactivo Nivel 2",
+          category_ids: [categoryResult.find((cat) => cat.name === "Rompecabezas")!.id],
+          description: "Juego mental para estimular la inteligencia canina.",
+          handle: "puzzle-interactivo-nivel-2",
+          weight: 800,
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
+          images: [{url: "https://via.placeholder.com/400x400/3F51B5/FFFFFF?text=Puzzle"}],
+          variants: [{
+            title: "Nivel 2",
+            sku: "DOG-JUG-PUZZLE-001",
+            prices: [{amount: randomPrice(15000, 28000), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 25, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
+        },
+
+        // PERRO - Accesorios
+        {
+          title: "Cama Espuma Viscoelástica",
+          category_ids: [categoryResult.find((cat) => cat.name === "Camas" && cat.parent_category_id === mainCategories.find((c) => c.name === "Perro")!.id)!.id],
+          description: "Cama ortopédica con espuma de memoria para máximo confort.",
+          handle: "cama-espuma-viscoelastica",
+          weight: 2500,
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
+          images: [{url: "https://via.placeholder.com/400x400/795548/FFFFFF?text=Dog+Bed"}],
+          variants: [{
+            title: "Grande",
+            sku: "DOG-ACC-CAMA-001",
+            prices: [{amount: randomPrice(35000, 65000), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 58, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
+        },
+        {
+          title: "Bowl Acero Inoxidable Antideslizante",
+          category_ids: [categoryResult.find((cat) => cat.name === "Platos, Bowls" && cat.parent_category_id === mainCategories.find((c) => c.name === "Perro")!.id)!.id],
+          description: "Plato de acero inoxidable con base de goma antideslizante.",
+          handle: "bowl-acero-antideslizante",
+          weight: 400,
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
+          images: [{url: "https://via.placeholder.com/400x400/9E9E9E/FFFFFF?text=Steel+Bowl"}],
+          variants: [{
+            title: "1.5L",
+            sku: "DOG-ACC-BOWL-001",
+            prices: [{amount: randomPrice(8500, 16000), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 14, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
+        },
+        {
+          title: "Correa Retráctil 5 metros",
+          category_ids: [categoryResult.find((cat) => cat.name === "Correas")!.id],
+          description: "Correa extensible hasta 5 metros con sistema de frenado.",
+          handle: "correa-retractil-5m",
+          weight: 350,
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
+          images: [{url: "https://via.placeholder.com/400x400/424242/FFFFFF?text=Leash"}],
+          variants: [{
+            title: "Hasta 25kg",
+            sku: "DOG-ACC-CORREA-001",
+            prices: [{amount: randomPrice(12000, 22000), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 20, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
+        },
+        {
+          title: "Arnés Acolchado Reflectante",
+          category_ids: [categoryResult.find((cat) => cat.name === "Collares y Arneses")!.id],
+          description: "Arnés ergonómico con detalles reflectantes para seguridad nocturna.",
+          handle: "arnes-acolchado-reflectante",
+          weight: 250,
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
+          images: [{url: "https://via.placeholder.com/400x400/FF9800/FFFFFF?text=Harness"}],
+          variants: [{
+            title: "Mediano",
+            sku: "DOG-ACC-ARNES-001",
+            prices: [{amount: randomPrice(15000, 28000), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 25, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
+        },
+        {
+          title: "Clicker de Entrenamiento",
+          category_ids: [categoryResult.find((cat) => cat.name === "Adiestramiento")!.id],
+          description: "Clicker profesional para refuerzo positivo en entrenamiento.",
+          handle: "clicker-entrenamiento",
+          weight: 30,
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
+          images: [{url: "https://via.placeholder.com/400x400/4CAF50/FFFFFF?text=Clicker"}],
+          variants: [{
+            title: "Unidad",
+            sku: "DOG-ACC-CLICKER-001",
+            prices: [{amount: randomPrice(3500, 7500), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 6, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
+        },
+        {
+          title: "Jaula Plegable 2 Puertas",
+          category_ids: [categoryResult.find((cat) => cat.name === "Recintos, Jaulas, Transporte" && cat.parent_category_id === mainCategories.find((c) => c.name === "Perro")!.id)!.id],
+          description: "Jaula metálica plegable con bandeja extraíble.",
+          handle: "jaula-plegable-2-puertas",
+          weight: 8000,
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
+          images: [{url: "https://via.placeholder.com/400x400/546E7A/FFFFFF?text=Crate"}],
+          variants: [{
+            title: "Mediana (76cm)",
+            sku: "DOG-ACC-JAULA-001",
+            prices: [{amount: randomPrice(45000, 75000), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 68, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
+        },
+
+        // PERRO - Higiene y Baño
+        {
+          title: "Toallitas Húmedas Biodegradables",
+          category_ids: [categoryResult.find((cat) => cat.name === "Toallitas limpieza" && cat.parent_category_id === mainCategories.find((c) => c.name === "Perro")!.id)!.id],
+          description: "Toallitas hipoalergénicas para limpieza rápida de patas y pelaje.",
+          handle: "toallitas-biodegradables",
+          weight: 200,
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
+          images: [{url: "https://via.placeholder.com/400x400/00BCD4/FFFFFF?text=Wipes"}],
+          variants: [{
+            title: "Pack 100 unidades",
+            sku: "DOG-HIG-TOALLITA-001",
+            prices: [{amount: randomPrice(6500, 12000), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 10, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
+        },
+        {
+          title: "Pads de Entrenamiento Super Absorbentes",
+          category_ids: [categoryResult.find((cat) => cat.name === "Pads de entrenamiento")!.id],
+          description: "Pañales de entrenamiento con 5 capas ultra absorbentes.",
+          handle: "pads-super-absorbentes",
+          weight: 1500,
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
+          images: [{url: "https://via.placeholder.com/400x400/B39DDB/FFFFFF?text=Training+Pads"}],
+          variants: [{
+            title: "Pack 50 unidades",
+            sku: "DOG-HIG-PAD-001",
+            prices: [{amount: randomPrice(18000, 32000), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 28, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
+        },
+        {
+          title: "Bolsas Biodegradables con Dispensador",
+          category_ids: [categoryResult.find((cat) => cat.name === "Bolsas")!.id],
+          description: "Bolsas ecológicas para desechos con dispensador de clip.",
+          handle: "bolsas-biodegradables-dispensador",
+          weight: 300,
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
+          images: [{url: "https://via.placeholder.com/400x400/66BB6A/FFFFFF?text=Poop+Bags"}],
+          variants: [{
+            title: "240 bolsas",
+            sku: "DOG-HIG-BOLSA-001",
+            prices: [{amount: randomPrice(8500, 15000), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 13, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
+        },
+        {
+          title: "Pañales Desechables Talla M",
+          category_ids: [categoryResult.find((cat) => cat.name === "Pañales")!.id],
+          description: "Pañales desechables para incontinencia o hembras en celo.",
+          handle: "panales-desechables-m",
+          weight: 800,
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
+          images: [{url: "https://via.placeholder.com/400x400/AB47BC/FFFFFF?text=Diapers"}],
+          variants: [{
+            title: "Pack 12 unidades",
+            sku: "DOG-HIG-PANAL-001",
+            prices: [{amount: randomPrice(9500, 17000), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 15, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
+        },
+
+        // PERRO - Peluquería
+        {
+          title: "Cepillo Slicker Profesional",
+          category_ids: [categoryResult.find((cat) => cat.name === "Cepillos" && cat.parent_category_id === mainCategories.find((c) => c.name === "Perro")!.id)!.id],
+          description: "Cepillo de cerdas finas para desenredar y eliminar pelo muerto.",
+          handle: "cepillo-slicker-profesional",
+          weight: 150,
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
+          images: [{url: "https://via.placeholder.com/400x400/26A69A/FFFFFF?text=Slicker"}],
+          variants: [{
+            title: "Mediano",
+            sku: "DOG-PEL-CEPILLO-001",
+            prices: [{amount: randomPrice(8500, 16000), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 14, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
+        },
+        {
+          title: "Shampoo Hipoalergénico Avena",
+          category_ids: [categoryResult.find((cat) => cat.name === "Shampoos y Acondicionadores" && cat.parent_category_id === mainCategories.find((c) => c.name === "Perro")!.id)!.id],
+          description: "Shampoo suave con extracto de avena para pieles sensibles.",
+          handle: "shampoo-hipoalergenico-avena",
+          weight: 500,
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
+          images: [{url: "https://via.placeholder.com/400x400/42A5F5/FFFFFF?text=Shampoo"}],
+          variants: [{
+            title: "500ml",
+            sku: "DOG-PEL-SHAMPOO-001",
+            prices: [{amount: randomPrice(12000, 22000), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 20, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
+        },
+        {
+          title: "Cortaúñas Guillotina",
+          category_ids: [categoryResult.find((cat) => cat.name === "Corta Uñas y Herramientas" && cat.parent_category_id === mainCategories.find((c) => c.name === "Perro")!.id)!.id],
+          description: "Cortaúñas tipo guillotina con mango ergonómico.",
+          handle: "cortaunas-guillotina",
+          weight: 100,
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
+          images: [{url: "https://via.placeholder.com/400x400/78909C/FFFFFF?text=Nail+Clipper"}],
+          variants: [{
+            title: "Mediano-Grande",
+            sku: "DOG-PEL-CORTA-001",
+            prices: [{amount: randomPrice(8500, 15000), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 13, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
+        },
+        {
+          title: "Crema Almohadillas Reparadora",
+          category_ids: [categoryResult.find((cat) => cat.name === "Skin Care" && cat.parent_category_id === mainCategories.find((c) => c.name === "Perro")!.id)!.id],
+          description: "Crema hidratante y reparadora para almohadillas agrietadas.",
+          handle: "crema-almohadillas-reparadora",
+          weight: 75,
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
+          images: [{url: "https://via.placeholder.com/400x400/EC407A/FFFFFF?text=Paw+Balm"}],
+          variants: [{
+            title: "75ml",
+            sku: "DOG-PEL-SKIN-001",
+            prices: [{amount: randomPrice(9500, 17000), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 15, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
+        },
+
+        // PERRO - Farmacia
+        {
+          title: "Pipeta Antipulgas Frontline",
+          category_ids: [categoryResult.find((cat) => cat.name === "Pulgas y Garrapatas" && cat.parent_category_id === mainCategories.find((c) => c.name === "Perro")!.id)!.id],
+          description: "Pipeta antiparasitaria de acción rápida y prolongada.",
+          handle: "pipeta-frontline",
+          weight: 50,
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
+          images: [{url: "https://via.placeholder.com/400x400/D32F2F/FFFFFF?text=Frontline"}],
+          variants: [{
+            title: "10-20kg",
+            sku: "DOG-FARM-PULGAS-001",
+            prices: [{amount: randomPrice(15000, 25000), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 22, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
+        },
+        {
+          title: "Multivitamínico Canino Completo",
+          category_ids: [categoryResult.find((cat) => cat.name === "Vitaminas y Suplementos" && cat.parent_category_id === mainCategories.find((c) => c.name === "Perro")!.id)!.id],
+          description: "Suplemento vitamínico completo para todas las edades.",
+          handle: "multivitaminico-canino",
+          weight: 200,
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
+          images: [{url: "https://via.placeholder.com/400x400/43A047/FFFFFF?text=Vitamins"}],
+          variants: [{
+            title: "60 tabletas",
+            sku: "DOG-FARM-VIT-001",
+            prices: [{amount: randomPrice(18000, 32000), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 28, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
+        },
+        {
+          title: "Spray Anti-Picazón Aloe Vera",
+          category_ids: [categoryResult.find((cat) => cat.name === "Alergias y Picazón" && cat.parent_category_id === mainCategories.find((c) => c.name === "Perro")!.id)!.id],
+          description: "Spray calmante con aloe vera para alivio inmediato de picazón.",
+          handle: "spray-anti-picazon",
+          weight: 250,
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
+          images: [{url: "https://via.placeholder.com/400x400/7CB342/FFFFFF?text=Anti-Itch"}],
+          variants: [{
+            title: "250ml",
+            sku: "DOG-FARM-ALERGIA-001",
+            prices: [{amount: randomPrice(12000, 20000), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 18, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
+        },
+        {
+          title: "Chaleco Refrescante Talla M",
+          category_ids: [categoryResult.find((cat) => cat.name === "Control de Temperatura" && cat.parent_category_id === mainCategories.find((c) => c.name === "Perro")!.id)!.id],
+          description: "Chaleco con tecnología de enfriamiento para días calurosos.",
+          handle: "chaleco-refrescante-m",
+          weight: 300,
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
+          images: [{url: "https://via.placeholder.com/400x400/29B6F6/FFFFFF?text=Cooling+Vest"}],
+          variants: [{
+            title: "Mediano",
+            sku: "DOG-FARM-TEMP-001",
+            prices: [{amount: randomPrice(18000, 32000), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 28, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
+        },
+        {
+          title: "Antiinflamatorio Meloxicam 2mg",
+          category_ids: [categoryResult.find((cat) => cat.name === "Medicamentos" && cat.parent_category_id === mainCategories.find((c) => c.name === "Perro")!.id)!.id],
+          description: "Antiinflamatorio veterinario para dolor articular (requiere receta).",
+          handle: "meloxicam-2mg",
+          weight: 100,
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
+          images: [{url: "https://via.placeholder.com/400x400/EF5350/FFFFFF?text=Meloxicam"}],
+          variants: [{
+            title: "20 comprimidos",
+            sku: "DOG-FARM-MED-001",
+            prices: [{amount: randomPrice(22000, 38000), currency_code: CHILEAN_CONFIG.CURRENCY.toLowerCase()}, {amount: 33, currency_code: "usd"}],
+          }],
+          sales_channels: [{id: defaultSalesChannel[0].id}],
         },
       ],
     },
@@ -1193,7 +1282,7 @@ export default async function seedDemoData({ container }: ExecArgs) {
   for (const inventoryItem of inventoryItems) {
     const inventoryLevel = {
       location_id: stockLocation.id,
-      stocked_quantity: 1000000,
+      stocked_quantity: 100,
       inventory_item_id: inventoryItem.id,
     };
     inventoryLevels.push(inventoryLevel);
