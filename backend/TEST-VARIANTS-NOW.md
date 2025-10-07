@@ -86,6 +86,14 @@ Durante la sincronización verás logs como:
 📊 Atributos detectados: { Size: [ 'L', 'M', 'S', 'XL' ] }
 ✅ Atributo encontrado: Size (ID: 1)
 ✅ Variantes sincronizadas exitosamente
+
+💰 Sincronizando precios de variantes para Poleron...
+🔍 Buscando variante por SKU: SWEATSHIRT-L
+✅ Variantes encontradas por SKU SWEATSHIRT-L: 1
+💰 Precio para SWEATSHIRT-L: 10 clp
+💰 Actualizando precio de variante 456: 10 CLP
+✅ Precio actualizado para variante 456
+✅ Precios de variantes sincronizados exitosamente
 ```
 
 ## ✅ Resultado esperado en Odoo
@@ -108,7 +116,15 @@ Atributo         | Valores
 Variant         | [Nombre de la variante]
 ```
 
-Y en la pestaña "Variantes" verás las variantes generadas automáticamente.
+### Precios de variantes:
+- **Antes**: Todas las variantes mostraban "$ 0,00" en "Precio extra" ❌
+- **Después**: Cada variante muestra su precio específico desde Medusa ✅
+  - S: $10.000 CLP
+  - M: $10.000 CLP  
+  - L: $10.000 CLP
+  - XL: $10.000 CLP
+
+Y en la pestaña "Variantes" verás las variantes generadas automáticamente con sus precios correctos.
 
 ## 🎯 Próximos pasos
 

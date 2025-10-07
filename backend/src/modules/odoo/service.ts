@@ -357,9 +357,128 @@ export default class OdooModuleService {
   }
 
   /**
+   * Actualiza el precio de una variante específica en Odoo
+   */
+  async updateVariantPrice(productVariantId: number, price: number, currencyCode: string = 'CLP'): Promise<void> {
+    await this.login()
+
+    try {
+      console.log(`💰 Actualizando precio de variante ${productVariantId}: ${price} ${currencyCode}`)
+      
+      // En Odoo, el precio de una variante se actualiza en el modelo product.product
+      await this.client.request("call", {
+        service: "object",
+        method: "execute_kw",
+        args: [
+          this.options.dbName,
+          this.uid,
+          this.options.apiKey,
+          "product.product",
+          "write",
+          [
+            [productVariantId],
+            {
+              list_price: price,
+              // También actualizar el precio de la plantilla si es necesario
+              price_extra: price
+            }
+          ],
+        ],
+      })
+
+      console.log(`✅ Precio actualizado para variante ${productVariantId}`)
+    } catch (error: any) {
+      console.error(`❌ Error actualizando precio de variante ${productVariantId}:`, error)
+      throw error
+    }
+  }
+
+  /**
+   * Busca una variante específica en Odoo por SKU
+   */
+  async findVariantBySku(sku: string): Promise<any[]> {
+    await this.login()
+
+    try {
+      console.log(`🔍 Buscando variante por SKU: ${sku}`)
+      
+      const variants = await this.client.request("call", {
+        service: "object",
+        method: "execute_kw",
+        args: [
+          this.options.dbName,
+          this.uid,
+          this.options.apiKey,
+          "product.product",
+          "search_read",
+          [[["default_code", "=", sku]]],
+          { fields: ["id", "name", "default_code", "list_price", "product_tmpl_id"] }
+        ],
+      }) as any[]
+
+      console.log(`✅ Variantes encontradas por SKU ${sku}: ${variants.length}`)
+      return variants
+    } catch (error: any) {
+      console.error(`❌ Error buscando variante por SKU ${sku}:`, error)
+      return []
+    }
+  }
+
+  /**
+   * Sincroniza precios de variantes desde Medusa a Odoo
+   */
+  async syncVariantPrices(variants: Array<{ 
+    id: string; 
+    title: string; 
+    sku: string; 
+    prices: any[] 
+  }>): Promise<void> {
+    await this.login()
+
+    try {
+      console.log(`💰 Sincronizando precios de ${variants.length} variantes...`)
+
+      for (const variant of variants) {
+        if (!variant.prices || variant.prices.length === 0) {
+          console.log(`⚠️ No hay precios para la variante ${variant.sku}`)
+          continue
+        }
+
+        // Buscar la variante en Odoo por SKU
+        const odooVariants = await this.findVariantBySku(variant.sku)
+        
+        if (odooVariants.length === 0) {
+          console.log(`⚠️ No se encontró la variante ${variant.sku} en Odoo`)
+          continue
+        }
+
+        const odooVariant = odooVariants[0]
+        
+        // Obtener el precio en CLP (prioridad) o la primera moneda disponible
+        const clpPrice = variant.prices.find((p: any) => p.currency_code === 'clp')
+        const usdPrice = variant.prices.find((p: any) => p.currency_code === 'usd')
+        const eurPrice = variant.prices.find((p: any) => p.currency_code === 'eur')
+        
+        const selectedPrice = clpPrice || usdPrice || eurPrice || variant.prices[0]
+        const priceAmount = selectedPrice.amount / 100 // Convertir de centavos a unidades
+
+        console.log(`💰 Precio para ${variant.sku}: ${priceAmount} ${selectedPrice.currency_code}`)
+
+        // Actualizar el precio en Odoo
+        await this.updateVariantPrice(odooVariant.id, priceAmount, selectedPrice.currency_code)
+      }
+
+      console.log(`✅ Precios de variantes sincronizados exitosamente`)
+    } catch (error: any) {
+      console.error(`❌ Error sincronizando precios de variantes:`, error)
+      throw error
+    }
+  }
+
+  /**
    * Sincroniza variantes de Medusa como atributos y valores en Odoo
    */
-  async syncProductVariants(productTemplateId: number, variants: Array<{ title: string; sku: string; options?: any[] }>): Promise<void> {
+  async syncProductVariants(productTemplateId: number, variants: Array<{ title: string; sku: string; options?: any[]; prices?: any[] }>): Promise<void> {
     await this.login()
 
     try {

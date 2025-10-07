@@ -39,6 +39,12 @@ async function debugProduct(title = 'Pantalones cortos') {
       console.log(`     SKU: ${v.sku}`);
       console.log(`     Options: ${JSON.stringify(v.options)}`);
       console.log(`     Has Options: ${v.hasOptions}`);
+      console.log(`     Prices: ${v.prices ? v.prices.length : 0} precios`);
+      if (v.prices && v.prices.length > 0) {
+        v.prices.forEach((p, pIdx) => {
+          console.log(`       ${pIdx + 1}. ${p.currency_code}: ${p.amount} centavos ($${p.amount / 100})`);
+        });
+      }
     });
 
     console.log(`\n🐛 Debug info:`, JSON.stringify(data.data[0].debug, null, 2));
