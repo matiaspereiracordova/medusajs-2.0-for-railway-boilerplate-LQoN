@@ -15,25 +15,39 @@ export async function GET(
     const query = req.scope.resolve("query")
     const { regionId } = req.query as { regionId?: string }
 
-    // Si no hay regionId, obtener la primera región disponible
+    // Si no hay regionId, obtener la primera región disponible con su currency_code
     let selectedRegionId = regionId
+    let currencyCode = 'clp'
     
     if (!selectedRegionId) {
       const { data: regions } = await query.graph({
         entity: "region",
-        fields: ["id"],
+        fields: ["id", "currency_code"],
         pagination: { take: 1 }
       })
       
       if (regions && regions.length > 0) {
         selectedRegionId = regions[0].id
-        console.log(`ℹ️ No se especificó regionId, usando: ${selectedRegionId}`)
+        currencyCode = regions[0].currency_code || 'clp'
+        console.log(`ℹ️ No se especificó regionId, usando: ${selectedRegionId} con currency: ${currencyCode}`)
       } else {
         res.status(400).json({
           success: false,
           message: "No hay regiones disponibles en el sistema"
         })
         return
+      }
+    } else {
+      // Obtener el currency_code de la región especificada
+      const { data: regions } = await query.graph({
+        entity: "region",
+        fields: ["id", "currency_code"],
+        filters: { id: selectedRegionId }
+      })
+      
+      if (regions && regions.length > 0) {
+        currencyCode = regions[0].currency_code || 'clp'
+        console.log(`ℹ️ Región ${selectedRegionId} con currency: ${currencyCode}`)
       }
     }
 
@@ -54,7 +68,8 @@ export async function GET(
         status: "published"
       },
       context: {
-        region_id: selectedRegionId
+        region_id: selectedRegionId,
+        currency_code: currencyCode
       },
       pagination: {
         take: 100
