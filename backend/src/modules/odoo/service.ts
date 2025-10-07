@@ -200,6 +200,254 @@ export default class OdooModuleService {
     }
   }
 
+  // ==================== MÉTODOS PARA VARIANTES Y ATRIBUTOS ====================
+
+  /**
+   * Busca o crea un atributo en Odoo (ej: "Size", "Color")
+   */
+  async getOrCreateAttribute(attributeName: string): Promise<number> {
+    await this.login()
+
+    try {
+      console.log(`🔍 Buscando atributo: ${attributeName}`)
+      
+      // Buscar si el atributo ya existe
+      const existingAttributes = await this.client.request("call", {
+        service: "object",
+        method: "execute_kw",
+        args: [
+          this.options.dbName,
+          this.uid,
+          this.options.apiKey,
+          "product.attribute",
+          "search_read",
+          [[["name", "=", attributeName]]],
+          { fields: ["id", "name"], limit: 1 }
+        ],
+      }) as any[]
+
+      if (existingAttributes.length > 0) {
+        console.log(`✅ Atributo encontrado: ${attributeName} (ID: ${existingAttributes[0].id})`)
+        return existingAttributes[0].id
+      }
+
+      // Crear nuevo atributo si no existe
+      console.log(`➕ Creando atributo: ${attributeName}`)
+      const attributeId = await this.client.request("call", {
+        service: "object",
+        method: "execute_kw",
+        args: [
+          this.options.dbName,
+          this.uid,
+          this.options.apiKey,
+          "product.attribute",
+          "create",
+          [{
+            name: attributeName,
+            display_type: 'radio', // Mostrar como radio buttons en Odoo
+            create_variant: 'always' // Siempre crear variantes
+          }],
+        ],
+      }) as number
+
+      console.log(`✅ Atributo creado: ${attributeName} (ID: ${attributeId})`)
+      return attributeId
+    } catch (error: any) {
+      console.error(`❌ Error obteniendo/creando atributo ${attributeName}:`, error)
+      throw error
+    }
+  }
+
+  /**
+   * Busca o crea un valor de atributo en Odoo (ej: "L", "M", "S" para el atributo "Size")
+   */
+  async getOrCreateAttributeValue(attributeId: number, valueName: string): Promise<number> {
+    await this.login()
+
+    try {
+      console.log(`🔍 Buscando valor de atributo: ${valueName} para atributo ID ${attributeId}`)
+      
+      // Buscar si el valor ya existe para este atributo
+      const existingValues = await this.client.request("call", {
+        service: "object",
+        method: "execute_kw",
+        args: [
+          this.options.dbName,
+          this.uid,
+          this.options.apiKey,
+          "product.attribute.value",
+          "search_read",
+          [[
+            ["name", "=", valueName],
+            ["attribute_id", "=", attributeId]
+          ]],
+          { fields: ["id", "name"], limit: 1 }
+        ],
+      }) as any[]
+
+      if (existingValues.length > 0) {
+        console.log(`✅ Valor de atributo encontrado: ${valueName} (ID: ${existingValues[0].id})`)
+        return existingValues[0].id
+      }
+
+      // Crear nuevo valor si no existe
+      console.log(`➕ Creando valor de atributo: ${valueName}`)
+      const valueId = await this.client.request("call", {
+        service: "object",
+        method: "execute_kw",
+        args: [
+          this.options.dbName,
+          this.uid,
+          this.options.apiKey,
+          "product.attribute.value",
+          "create",
+          [{
+            name: valueName,
+            attribute_id: attributeId
+          }],
+        ],
+      }) as number
+
+      console.log(`✅ Valor de atributo creado: ${valueName} (ID: ${valueId})`)
+      return valueId
+    } catch (error: any) {
+      console.error(`❌ Error obteniendo/creando valor de atributo ${valueName}:`, error)
+      throw error
+    }
+  }
+
+  /**
+   * Agrega una línea de atributo a un producto template en Odoo
+   */
+  async addAttributeLineToProduct(productTemplateId: number, attributeId: number, valueIds: number[]): Promise<void> {
+    await this.login()
+
+    try {
+      console.log(`➕ Agregando línea de atributo al producto ${productTemplateId}`)
+      console.log(`   Atributo ID: ${attributeId}, Valores: ${valueIds.join(', ')}`)
+
+      // Odoo usa un formato especial para relaciones many2many: [(6, 0, [ids])]
+      // (6, 0, [ids]) significa "reemplazar todos los valores con estos IDs"
+      await this.client.request("call", {
+        service: "object",
+        method: "execute_kw",
+        args: [
+          this.options.dbName,
+          this.uid,
+          this.options.apiKey,
+          "product.template",
+          "write",
+          [
+            [productTemplateId],
+            {
+              attribute_line_ids: [[0, 0, {
+                attribute_id: attributeId,
+                value_ids: [[6, 0, valueIds]]
+              }]]
+            }
+          ],
+        ],
+      })
+
+      console.log(`✅ Línea de atributo agregada al producto ${productTemplateId}`)
+    } catch (error: any) {
+      console.error(`❌ Error agregando línea de atributo al producto ${productTemplateId}:`, error)
+      throw error
+    }
+  }
+
+  /**
+   * Sincroniza variantes de Medusa como atributos y valores en Odoo
+   */
+  async syncProductVariants(productTemplateId: number, variants: Array<{ title: string; sku: string; options?: any[] }>): Promise<void> {
+    await this.login()
+
+    try {
+      console.log(`🔄 Sincronizando ${variants.length} variantes para producto ${productTemplateId}`)
+
+      // Primero, limpiar las líneas de atributo existentes
+      console.log(`🧹 Limpiando atributos existentes del producto`)
+      await this.client.request("call", {
+        service: "object",
+        method: "execute_kw",
+        args: [
+          this.options.dbName,
+          this.uid,
+          this.options.apiKey,
+          "product.template",
+          "write",
+          [
+            [productTemplateId],
+            {
+              attribute_line_ids: [[5, 0, 0]] // (5, 0, 0) elimina todas las líneas
+            }
+          ],
+        ],
+      })
+
+      // Agrupar variantes por opciones (atributos)
+      // En Medusa, las variantes pueden tener opciones como { title: "Size", value: "L" }
+      const attributeMap = new Map<string, Set<string>>()
+
+      variants.forEach(variant => {
+        // Si la variante tiene opciones definidas, usarlas
+        if (variant.options && variant.options.length > 0) {
+          variant.options.forEach((option: any) => {
+            const attrName = option.title || option.name || 'Size'
+            const attrValue = option.value
+            
+            if (!attributeMap.has(attrName)) {
+              attributeMap.set(attrName, new Set())
+            }
+            attributeMap.get(attrName)!.add(attrValue)
+          })
+        } else {
+          // Si no hay opciones, usar el título de la variante
+          // Extraer el valor de talla del título (ej: "S" de "SHORTS-S")
+          const match = variant.title?.match(/^(.+?)[-\s]*([SMLX]+|[0-9]+)$/i) ||
+                       variant.sku?.match(/^(.+?)[-\s]*([SMLX]+|[0-9]+)$/i)
+          
+          if (match && match[2]) {
+            const attrValue = match[2].toUpperCase()
+            if (!attributeMap.has('Size')) {
+              attributeMap.set('Size', new Set())
+            }
+            attributeMap.get('Size')!.add(attrValue)
+          } else {
+            // Si no se puede extraer, usar el título completo
+            if (!attributeMap.has('Variant')) {
+              attributeMap.set('Variant', new Set())
+            }
+            attributeMap.get('Variant')!.add(variant.title || variant.sku || 'Default')
+          }
+        }
+      })
+
+      console.log(`📊 Atributos detectados:`, Object.fromEntries(
+        Array.from(attributeMap.entries()).map(([key, values]) => [key, Array.from(values)])
+      ))
+
+      // Crear/obtener atributos y valores, y agregar líneas al producto
+      for (const [attributeName, values] of attributeMap.entries()) {
+        const attributeId = await this.getOrCreateAttribute(attributeName)
+        const valueIds: number[] = []
+
+        for (const valueName of values) {
+          const valueId = await this.getOrCreateAttributeValue(attributeId, valueName)
+          valueIds.push(valueId)
+        }
+
+        // Agregar la línea de atributo al producto
+        await this.addAttributeLineToProduct(productTemplateId, attributeId, valueIds)
+      }
+
+      console.log(`✅ Variantes sincronizadas exitosamente para producto ${productTemplateId}`)
+    } catch (error: any) {
+      console.error(`❌ Error sincronizando variantes para producto ${productTemplateId}:`, error)
+      throw error
+    }
+  }
+
   async updateProduct(productId: number, productData: any): Promise<boolean> {
     await this.login()
 

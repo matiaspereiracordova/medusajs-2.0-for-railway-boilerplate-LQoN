@@ -198,7 +198,7 @@ const getMedusaProductsStep = createStep(
         products = await Promise.all(
           productIds.map((id) =>
             productModuleService.retrieveProduct(id, {
-              relations: ["variants", "categories", "tags", "images"],
+              relations: ["variants", "variants.options", "categories", "tags", "images"],
               // Intentar incluir contexto de región para calculated_price
               ...(region && { region_id: region.id })
             })
@@ -209,7 +209,7 @@ const getMedusaProductsStep = createStep(
         products = await productModuleService.listProducts(
           {},
           {
-            relations: ["variants", "categories", "tags", "images"],
+            relations: ["variants", "variants.options", "categories", "tags", "images"],
             take: limit,
             skip: offset,
             // Intentar incluir contexto de región para calculated_price
@@ -330,13 +330,22 @@ const transformProductsStep = createStep(
           image_1920: productImageBase64, // Imagen principal del producto en base64
         }
 
-        // Preparar datos de variantes con precios para sincronización posterior
+        // Preparar datos de variantes con precios y opciones para sincronización posterior
         const variantData = product.variants?.map(variant => ({
           id: variant.id,
           title: variant.title,
           sku: variant.sku,
-          prices: variant.prices || []
+          prices: variant.prices || [],
+          options: variant.options || [] // Incluir opciones de la variante
         })) || []
+
+        // Debug: mostrar opciones de variantes
+        if (variantData.length > 0 && variantData[0].options?.length > 0) {
+          console.log(`🔍 Opciones de variantes encontradas para ${product.title}:`)
+          variantData.forEach((v, idx) => {
+            console.log(`  Variante ${idx + 1} (${v.title || v.sku}):`, v.options.map((o: any) => `${o.title}: ${o.value}`).join(', '))
+          })
+        }
 
         transformedProducts.push({
           medusaProduct: product,
@@ -400,7 +409,7 @@ const syncProductsToOdooStep = createStep(
 
     console.log(`🔄 Iniciando sincronización inteligente de ${transformedProducts.length} productos con ODOO...`)
 
-    for (const { medusaProduct, odooProductData, existsInOdoo, odooProductId } of transformedProducts) {
+    for (const { medusaProduct, odooProductData, variantData, existsInOdoo, odooProductId } of transformedProducts) {
       try {
         console.log(`📤 Procesando: ${odooProductData.name}`)
         
@@ -409,6 +418,8 @@ const syncProductsToOdooStep = createStep(
           odooProductData.name,
           odooProductData.x_medusa_id
         )
+
+        let finalOdooProductId: number | null = null
 
         if (exists && existingProduct) {
           if (isDuplicate) {
@@ -427,6 +438,7 @@ const syncProductsToOdooStep = createStep(
             
             if (updateSuccess) {
               updatedCount++
+              finalOdooProductId = existingProduct.id
               console.log(`✅ Producto duplicado actualizado: ${odooProductData.name} (ID: ${existingProduct.id})`)
             } else {
               errorCount++
@@ -441,6 +453,7 @@ const syncProductsToOdooStep = createStep(
             console.log(`🔄 Actualizando producto existente: ${odooProductData.name} (ID: ${existingProduct.id})`)
             await odooModuleService.updateProduct(existingProduct.id, odooProductData)
             updatedCount++
+            finalOdooProductId = existingProduct.id
             console.log(`✅ Producto actualizado: ${odooProductData.name}`)
           }
         } else if (existsInOdoo && odooProductId) {
@@ -448,13 +461,29 @@ const syncProductsToOdooStep = createStep(
           console.log(`🔄 Actualizando producto existente en ODOO: ${odooProductData.name} (ID: ${odooProductId})`)
           await odooModuleService.updateProduct(odooProductId, odooProductData)
           updatedCount++
+          finalOdooProductId = odooProductId
           console.log(`✅ Producto actualizado en ODOO: ${odooProductData.name}`)
         } else {
           // Crear nuevo producto solo si no existe
           console.log(`➕ Creando nuevo producto en ODOO: ${odooProductData.name}`)
           const newOdooProductId = await odooModuleService.createProduct(odooProductData)
           createdCount++
+          finalOdooProductId = newOdooProductId
           console.log(`✅ Producto creado en ODOO: ${odooProductData.name} (ID: ${newOdooProductId})`)
+        }
+
+        // Sincronizar variantes si el producto fue creado/actualizado exitosamente
+        if (finalOdooProductId && variantData && variantData.length > 1) {
+          console.log(`🔄 Sincronizando ${variantData.length} variantes para ${odooProductData.name}...`)
+          try {
+            await odooModuleService.syncProductVariants(finalOdooProductId, variantData)
+            console.log(`✅ Variantes sincronizadas para ${odooProductData.name}`)
+          } catch (variantError: any) {
+            console.error(`⚠️ Error sincronizando variantes para ${odooProductData.name}:`, variantError.message)
+            // No incrementar errorCount porque el producto principal se sincronizó correctamente
+          }
+        } else if (finalOdooProductId && variantData && variantData.length === 1) {
+          console.log(`ℹ️ Producto ${odooProductData.name} tiene solo una variante, no se crearán atributos`)
         }
       } catch (error: any) {
         errorCount++
