@@ -4,7 +4,8 @@ import {
   StepResponse,
   WorkflowResponse,
 } from "@medusajs/workflows-sdk"
-import { Modules } from "@medusajs/framework/utils"
+import { ModuleRegistrationName } from "@medusajs/framework/utils"
+import { IProductModuleService } from "@medusajs/framework/types"
 import OdooModuleService from "../modules/odoo/service.js"
 import { odooClient } from "../services/odoo-client.js"
 
@@ -25,24 +26,25 @@ const syncPricesStoreApiStep = createStep(
       const timestamp = new Date().toISOString()
       console.log(`[${timestamp}] 💰 STORE-API-SYNC: Iniciando sincronización usando Store API...`)
 
-      // Resolver el Store Product Module - este SÍ tiene calculated_price
-      const storeProductModule = container.resolve(Modules.PRODUCT)
+      // Usar el Product Module Service correctamente
+      const productModuleService: IProductModuleService = container.resolve(
+        ModuleRegistrationName.PRODUCT
+      )
       const odooModuleService: OdooModuleService = container.resolve("ODOO")
 
       const { productIds, limit = 10, offset = 0 } = input
 
       let products
       
-      // Obtener productos usando listProducts con las relaciones correctas
+      // Obtener productos
       if (productIds && productIds.length > 0) {
         console.log(`[${timestamp}] 🎯 STORE-API-SYNC: Obteniendo productos específicos`)
         
-        // Para productos específicos, obtenerlos uno por uno
         products = []
         for (const productId of productIds) {
           try {
-            const product = await storeProductModule.retrieve(productId, {
-              relations: ["variants", "variants.calculated_price"],
+            const product = await productModuleService.retrieveProduct(productId, {
+              relations: ["variants"],
             })
             products.push(product)
           } catch (error: any) {
@@ -51,10 +53,10 @@ const syncPricesStoreApiStep = createStep(
         }
       } else {
         console.log(`[${timestamp}] 📦 STORE-API-SYNC: Obteniendo productos (limit: ${limit})`)
-        products = await storeProductModule.list(
+        products = await productModuleService.listProducts(
           {},
           {
-            relations: ["variants", "variants.calculated_price"],
+            relations: ["variants"],
             take: limit,
             skip: offset,
           }
