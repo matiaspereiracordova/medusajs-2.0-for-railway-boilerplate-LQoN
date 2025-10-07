@@ -1,4 +1,6 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
+import { IRegionModuleService, IPricingModuleService } from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
 
 /**
  * Endpoint para listar TODOS los productos con sus precios CALCULADOS (como el storefront)
@@ -62,8 +64,8 @@ export async function GET(
     console.log(`✅ Productos recibidos: ${products?.length || 0}`)
     
     // Ahora obtener precios usando el pricing service para cada variante
-    const pricingModuleService = req.scope.resolve("pricingModuleService")
-    const regionModuleService = req.scope.resolve("regionModuleService")
+    const pricingModuleService: IPricingModuleService = req.scope.resolve(Modules.PRICING)
+    const regionModuleService: IRegionModuleService = req.scope.resolve(Modules.REGION)
     
     // Obtener la región completa para el currency_code
     const region = await regionModuleService.retrieveRegion(selectedRegionId)
