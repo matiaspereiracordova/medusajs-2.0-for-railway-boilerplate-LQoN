@@ -1,9 +1,7 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { IRegionModuleService } from "@medusajs/framework/types"
-import { ModuleRegistrationName } from "@medusajs/framework/utils"
 
 /**
- * Endpoint para depurar precios calculados usando Store API (como hace el storefront)
+ * Endpoint para depurar precios calculados usando Query Service (como hace el storefront)
  * GET /admin/debug-calculated-prices?productId=prod_xxx&regionId=reg_xxx
  */
 export async function GET(
@@ -11,6 +9,7 @@ export async function GET(
   res: MedusaResponse
 ) {
   try {
+    const query = req.scope.resolve("query")
     const { productId, regionId } = req.query as { productId?: string; regionId?: string }
 
     console.log('🔍 Depurando precios calculados...')
@@ -21,12 +20,13 @@ export async function GET(
     let selectedRegionId = regionId
     
     if (!selectedRegionId) {
-      const regionModuleService: IRegionModuleService = req.scope.resolve(
-        ModuleRegistrationName.REGION
-      )
+      const { data: regions } = await query.graph({
+        entity: "region",
+        fields: ["id"],
+        pagination: { take: 1 }
+      })
       
-      const regions = await regionModuleService.listRegions({}, { take: 1 })
-      if (regions.length > 0) {
+      if (regions && regions.length > 0) {
         selectedRegionId = regions[0].id
         console.log(`ℹ️ No se especificó regionId, usando: ${selectedRegionId}`)
       } else {
@@ -38,38 +38,37 @@ export async function GET(
       }
     }
 
-    // Hacer una petición HTTP al Store API (como hace el storefront)
-    const baseUrl = process.env.BACKEND_URL || 'http://localhost:9000'
-    
-    let url = `${baseUrl}/store/products?region_id=${selectedRegionId}&fields=*variants.calculated_price`
-    if (productId) {
-      url += `&id[]=${productId}`
-    }
+    console.log('🔍 Obteniendo productos con precios calculados para región:', selectedRegionId)
 
-    console.log('📡 Haciendo petición a Store API:', url)
-
-    const response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
+    // Usar el query service para obtener productos con calculated_price
+    const queryConfig: any = {
+      entity: "product",
+      fields: [
+        "id",
+        "title",
+        "handle",
+        "status",
+        "variants.*",
+        "variants.calculated_price.*"
+      ],
+      context: {
+        region_id: selectedRegionId
+      },
+      pagination: {
+        take: 100
       }
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('❌ Error en Store API:', errorText)
-      res.status(response.status).json({
-        success: false,
-        message: "Error al consultar Store API",
-        error: errorText
-      })
-      return
     }
 
-    const data = await response.json()
-    console.log('✅ Respuesta de Store API recibida')
+    // Si hay productId, filtrar por ese producto
+    if (productId) {
+      queryConfig.filters = { id: productId }
+    }
+
+    const { data: products } = await query.graph(queryConfig)
+    console.log('✅ Productos recibidos:', products?.length || 0)
 
     // Procesar los productos
-    const processedProducts = data.products.map((product: any) => {
+    const processedProducts = (products || []).map((product: any) => {
       const variants = product.variants?.map((variant: any) => ({
         id: variant.id,
         title: variant.title,
@@ -101,10 +100,8 @@ export async function GET(
     res.json({
       success: true,
       regionId: selectedRegionId,
-      storeApiUrl: url,
       totalProducts: processedProducts.length,
-      products: processedProducts,
-      rawResponse: data
+      products: processedProducts
     })
 
   } catch (error: any) {

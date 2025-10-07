@@ -1,6 +1,5 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { IRegionModuleService } from "@medusajs/framework/types"
-import { ModuleRegistrationName } from "@medusajs/framework/utils"
+import { MedusaError } from "@medusajs/framework/utils"
 
 /**
  * Endpoint para listar TODOS los productos con sus precios CALCULADOS (como el storefront)
@@ -13,18 +12,20 @@ export async function GET(
   try {
     console.log('📋 Listando todos los productos con precios calculados...')
 
+    const query = req.scope.resolve("query")
     const { regionId } = req.query as { regionId?: string }
 
     // Si no hay regionId, obtener la primera región disponible
     let selectedRegionId = regionId
     
     if (!selectedRegionId) {
-      const regionModuleService: IRegionModuleService = req.scope.resolve(
-        ModuleRegistrationName.REGION
-      )
+      const { data: regions } = await query.graph({
+        entity: "region",
+        fields: ["id"],
+        pagination: { take: 1 }
+      })
       
-      const regions = await regionModuleService.listRegions({}, { take: 1 })
-      if (regions.length > 0) {
+      if (regions && regions.length > 0) {
         selectedRegionId = regions[0].id
         console.log(`ℹ️ No se especificó regionId, usando: ${selectedRegionId}`)
       } else {
@@ -36,36 +37,36 @@ export async function GET(
       }
     }
 
-    // Hacer una petición HTTP al Store API (como hace el storefront)
-    const baseUrl = process.env.BACKEND_URL || 'http://localhost:9000'
-    const url = `${baseUrl}/store/products?region_id=${selectedRegionId}&fields=*variants.calculated_price&limit=100`
+    console.log('🔍 Obteniendo productos con precios calculados para región:', selectedRegionId)
 
-    console.log('📡 Haciendo petición a Store API:', url)
-
-    const response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
+    // Usar el query service para obtener productos con calculated_price
+    const { data: products } = await query.graph({
+      entity: "product",
+      fields: [
+        "id",
+        "title",
+        "handle",
+        "status",
+        "variants.*",
+        "variants.calculated_price.*"
+      ],
+      filters: {
+        status: "published"
+      },
+      context: {
+        region_id: selectedRegionId
+      },
+      pagination: {
+        take: 100
       }
     })
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('❌ Error en Store API:', errorText)
-      res.status(response.status).json({
-        success: false,
-        message: "Error al consultar Store API",
-        error: errorText
-      })
-      return
-    }
-
-    const data = await response.json()
-    console.log(`✅ Productos recibidos: ${data.products?.length || 0}`)
+    console.log(`✅ Productos recibidos: ${products?.length || 0}`)
 
     // Procesar cada producto
     const productSummary = []
 
-    for (const product of data.products || []) {
+    for (const product of products || []) {
       const variantsWithPrices = []
 
       for (const variant of product.variants || []) {
@@ -121,7 +122,6 @@ export async function GET(
     res.json({
       success: true,
       regionId: selectedRegionId,
-      storeApiUrl: url,
       stats,
       summary: {
         message: stats.productsWithIssues > 0 
