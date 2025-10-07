@@ -23,8 +23,10 @@ En Odoo, las variantes se manejan mediante:
 
 ### 1. Detección de variantes
 
-El sistema detecta variantes de dos formas:
+El sistema detecta variantes de tres formas:
 
+- **Productos con múltiples variantes**: Analiza las opciones para crear atributos específicos (Size, Color, etc.)
+- **Productos con una sola variante**: Crea un atributo genérico "Variant" con el nombre de la variante
 - **Si el producto tiene opciones definidas**: Usa `variant.options` (ej: `{ title: "Size", value: "L" }`)
 - **Si no hay opciones**: Extrae el valor del SKU o título (ej: "SHORTS-L" → Size: "L")
 

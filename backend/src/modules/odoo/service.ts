@@ -363,7 +363,26 @@ export default class OdooModuleService {
     await this.login()
 
     try {
-      console.log(`🔄 Sincronizando ${variants.length} variantes para producto ${productTemplateId}`)
+      console.log(`🔄 Sincronizando ${variants.length} variante(s) para producto ${productTemplateId}`)
+
+      // Si solo hay una variante, crear un atributo simple
+      if (variants.length === 1) {
+        console.log(`ℹ️ Producto con una sola variante, creando atributo simple`)
+        const variant = variants[0]
+        
+        // Crear un atributo genérico para la variante única
+        const attributeId = await this.getOrCreateAttribute('Variant')
+        const valueId = await this.getOrCreateAttributeValue(attributeId, variant.title || variant.sku || 'Default')
+        
+        // Agregar la línea de atributo al producto
+        await this.addAttributeLineToProduct(productTemplateId, attributeId, [valueId])
+        
+        console.log(`✅ Variante única sincronizada: ${variant.title || variant.sku}`)
+        return
+      }
+
+      // Para múltiples variantes, usar la lógica existente
+      console.log(`🔄 Procesando ${variants.length} variantes múltiples`)
 
       // Primero, limpiar las líneas de atributo existentes
       console.log(`🧹 Limpiando atributos existentes del producto`)

@@ -93,13 +93,22 @@ Durante la sincronización verás logs como:
 **Antes**: Pestaña "Atributos y variantes" vacía ❌
 
 **Después**:
+
+### Para productos con múltiples variantes (ej: Pantalones cortos):
 ```
 Atributo         | Valores
 -----------------|------------------
 Size (Talla)    | L, M, S, XL
 ```
 
-Y en la pestaña "Variantes" verás 4 productos variantes generados automáticamente.
+### Para productos con una sola variante:
+```
+Atributo         | Valores
+-----------------|------------------
+Variant         | [Nombre de la variante]
+```
+
+Y en la pestaña "Variantes" verás las variantes generadas automáticamente.
 
 ## 🎯 Próximos pasos
 
