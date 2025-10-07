@@ -75,7 +75,7 @@ export async function GET(
         odooProduct = existingOdooProducts[0]
         
         // Buscar variantes en Odoo
-        const odooClient = (await import("../../../services/odoo-client")).odooClient
+        const odooClient = (await import("../../../services/odoo-client.js")).odooClient
         odooVariants = await odooClient.searchRead(
           "product.product",
           [["product_tmpl_id", "=", odooProduct.id]],
