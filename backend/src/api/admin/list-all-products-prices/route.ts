@@ -73,14 +73,32 @@ export async function GET(
     const region = await regionModuleService.retrieveRegion(selectedRegionId)
     const currencyCode = region.currency_code?.toLowerCase() || 'clp'
     
-    console.log(`💰 Buscando precios para región ${selectedRegionId} con currency: ${currencyCode}`)
+    console.log(`💰 Buscando price sets para región ${selectedRegionId} con currency: ${currencyCode}`)
 
-    // Obtener todos los precios
-    const allPrices = await pricingModuleService.listPrices({
-      currency_code: currencyCode
+    // Obtener price sets (que incluyen la relación con variants)
+    const priceSets = await pricingModuleService.listPriceSets({}, { 
+      relations: ["prices", "variant_link"]
     })
     
-    console.log(`📊 Total de precios encontrados: ${allPrices.length}`)
+    console.log(`📊 Total de price sets encontrados: ${priceSets.length}`)
+    
+    // Crear un mapa de variant_id -> price_set
+    const variantPriceMap = new Map()
+    for (const priceSet of priceSets) {
+      // Obtener el variant_id desde variant_link si existe
+      const variantLink = (priceSet as any).variant_link
+      if (variantLink && variantLink.variant_id) {
+        // Buscar el precio para esta moneda
+        const pricesForCurrency = (priceSet.prices || []).filter(
+          (p: any) => p.currency_code?.toLowerCase() === currencyCode
+        )
+        if (pricesForCurrency.length > 0) {
+          variantPriceMap.set(variantLink.variant_id, pricesForCurrency[0])
+        }
+      }
+    }
+    
+    console.log(`💵 Variantes con precios: ${variantPriceMap.size}`)
 
     // Procesar cada producto
     const productSummary = []
@@ -92,18 +110,12 @@ export async function GET(
         let hasCalculatedPrice = false
         let priceAmount = 0
         
-        // Buscar precios para esta variante
-        const variantPrices = allPrices.filter((price: any) => {
-          // Los precios pueden estar relacionados con variant_id o price_set_id
-          return price.price_set?.variant_id === variant.id || 
-                 price.variant_id === variant.id ||
-                 (price.price_set?.variant_link?.variant_id === variant.id)
-        })
+        // Buscar precio en el mapa
+        const priceData = variantPriceMap.get(variant.id)
         
-        if (variantPrices.length > 0) {
+        if (priceData && priceData.amount) {
           hasCalculatedPrice = true
-          // Tomar el primer precio encontrado
-          priceAmount = Number(variantPrices[0].amount) / 100
+          priceAmount = Number(priceData.amount) / 100
         }
 
         variantsWithPrices.push({
@@ -111,7 +123,7 @@ export async function GET(
           title: variant.title || 'Sin título',
           sku: variant.sku || 'Sin SKU',
           hasPrices: hasCalculatedPrice,
-          priceCount: variantPrices.length,
+          priceCount: hasCalculatedPrice ? 1 : 0,
           prices: hasCalculatedPrice ? [{
             currency: currencyCode.toUpperCase(),
             amount: priceAmount,
