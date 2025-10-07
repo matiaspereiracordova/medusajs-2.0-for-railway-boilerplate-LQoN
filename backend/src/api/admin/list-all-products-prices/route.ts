@@ -9,7 +9,7 @@ import { ModuleRegistrationName } from "@medusajs/framework/utils"
 export async function GET(
   req: MedusaRequest,
   res: MedusaResponse
-): Promise<void> {
+) {
   try {
     console.log('📋 Listando todos los productos con precios calculados...')
 
@@ -23,15 +23,16 @@ export async function GET(
         ModuleRegistrationName.REGION
       )
       
-      const regions = await regionModuleService.listRegions({ take: 1 })
+      const regions = await regionModuleService.listRegions({}, { take: 1 })
       if (regions.length > 0) {
         selectedRegionId = regions[0].id
         console.log(`ℹ️ No se especificó regionId, usando: ${selectedRegionId}`)
       } else {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           message: "No hay regiones disponibles en el sistema"
         })
+        return
       }
     }
 
@@ -50,11 +51,12 @@ export async function GET(
     if (!response.ok) {
       const errorText = await response.text()
       console.error('❌ Error en Store API:', errorText)
-      return res.status(response.status).json({
+      res.status(response.status).json({
         success: false,
         message: "Error al consultar Store API",
         error: errorText
       })
+      return
     }
 
     const data = await response.json()

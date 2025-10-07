@@ -5,7 +5,7 @@ import { ModuleRegistrationName } from "@medusajs/framework/utils"
 export async function GET(
   req: MedusaRequest,
   res: MedusaResponse
-): Promise<void> {
+) {
   try {
     const productModuleService: IProductModuleService = req.scope.resolve(
       ModuleRegistrationName.PRODUCT
@@ -36,9 +36,7 @@ export async function GET(
         id: variant.id,
         title: variant.title,
         sku: variant.sku,
-        options: variant.options || [],
-        hasCalculatedPrice: !!variant.calculated_price,
-        calculatedPrice: variant.calculated_price
+        options: variant.options || []
       })) || [],
       images: product.images?.length || 0,
       thumbnail: !!product.thumbnail

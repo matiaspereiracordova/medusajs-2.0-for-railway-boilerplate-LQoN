@@ -1,4 +1,6 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
+import { IRegionModuleService } from "@medusajs/framework/types"
+import { ModuleRegistrationName } from "@medusajs/framework/utils"
 
 /**
  * Endpoint para depurar precios calculados usando Store API (como hace el storefront)
@@ -7,7 +9,7 @@ import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 export async function GET(
   req: MedusaRequest,
   res: MedusaResponse
-): Promise<void> {
+) {
   try {
     const { productId, regionId } = req.query as { productId?: string; regionId?: string }
 
@@ -19,22 +21,20 @@ export async function GET(
     let selectedRegionId = regionId
     
     if (!selectedRegionId) {
-      const { IRegionModuleService } = await import("@medusajs/framework/types")
-      const { ModuleRegistrationName } = await import("@medusajs/framework/utils")
-      
       const regionModuleService: IRegionModuleService = req.scope.resolve(
         ModuleRegistrationName.REGION
       )
       
-      const regions = await regionModuleService.listRegions({ take: 1 })
+      const regions = await regionModuleService.listRegions({}, { take: 1 })
       if (regions.length > 0) {
         selectedRegionId = regions[0].id
         console.log(`ℹ️ No se especificó regionId, usando: ${selectedRegionId}`)
       } else {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           message: "No hay regiones disponibles en el sistema"
         })
+        return
       }
     }
 
@@ -57,11 +57,12 @@ export async function GET(
     if (!response.ok) {
       const errorText = await response.text()
       console.error('❌ Error en Store API:', errorText)
-      return res.status(response.status).json({
+      res.status(response.status).json({
         success: false,
         message: "Error al consultar Store API",
         error: errorText
       })
+      return
     }
 
     const data = await response.json()
