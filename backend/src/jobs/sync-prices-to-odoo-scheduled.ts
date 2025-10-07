@@ -1,20 +1,11 @@
-import type {
-  MedusaRequest,
-  MedusaResponse,
-  ScheduledJobConfig,
-  ScheduledJobFunction,
-} from "@medusajs/framework/http"
+import type { MedusaContainer } from "@medusajs/types"
 import syncPricesToOdooWorkflow from "../workflows/sync-prices-to-odoo-simple.js"
 
 /**
  * Job programado para sincronizar precios desde MedusaJS hacia Odoo
  * Se ejecuta cada 6 horas para mantener los precios actualizados
  */
-export default async function syncPricesToOdooScheduled({
-  container,
-}: {
-  container: any
-}) {
+export default async function syncPricesToOdooScheduled(container: MedusaContainer) {
   const timestamp = new Date().toISOString()
   console.log(`[${timestamp}] ⏰ SCHEDULED-JOB: Iniciando sincronización programada de precios hacia Odoo...`)
 
@@ -48,7 +39,7 @@ export default async function syncPricesToOdooScheduled({
   }
 }
 
-export const config: ScheduledJobConfig = {
+export const config = {
   name: "sync-prices-to-odoo-scheduled",
   // Ejecutar cada 6 horas: "0 */6 * * *"
   // Para testing más frecuente: "*/30 * * * *" (cada 30 minutos)
