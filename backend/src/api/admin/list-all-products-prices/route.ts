@@ -1,5 +1,5 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { IRegionModuleService, IPricingModuleService } from "@medusajs/framework/types"
+import { IRegionModuleService } from "@medusajs/framework/types"
 import { Modules } from "@medusajs/framework/utils"
 
 /**
@@ -40,9 +40,9 @@ export async function GET(
       }
     }
 
-    console.log('🔍 Obteniendo productos base (sin precios)...')
+    console.log('🔍 Obteniendo productos con variantes incluyendo price_set_id...')
 
-    // Primero obtener solo productos base
+    // Obtener productos con variants y sus price_set_id
     const productsResult = await query.graph({
       entity: "product",
       fields: [
@@ -52,7 +52,9 @@ export async function GET(
         "status",
         "variants.id",
         "variants.title",
-        "variants.sku"
+        "variants.sku",
+        "variants.price_set.id",
+        "variants.price_set.prices.*"
       ],
       filters: {
         status: "published"
@@ -65,40 +67,12 @@ export async function GET(
     const products = productsResult.data || []
     console.log(`✅ Productos recibidos: ${products?.length || 0}`)
     
-    // Obtener todos los precios del sistema
-    const pricingModuleService: IPricingModuleService = req.scope.resolve(Modules.PRICING)
-    const regionModuleService: IRegionModuleService = req.scope.resolve(Modules.REGION)
-    
     // Obtener la región para el currency_code
+    const regionModuleService: IRegionModuleService = req.scope.resolve(Modules.REGION)
     const region = await regionModuleService.retrieveRegion(selectedRegionId)
     const currencyCode = region.currency_code?.toLowerCase() || 'clp'
     
-    console.log(`💰 Buscando price sets para región ${selectedRegionId} con currency: ${currencyCode}`)
-
-    // Obtener price sets (que incluyen la relación con variants)
-    const priceSets = await pricingModuleService.listPriceSets({}, { 
-      relations: ["prices", "variant_link"]
-    })
-    
-    console.log(`📊 Total de price sets encontrados: ${priceSets.length}`)
-    
-    // Crear un mapa de variant_id -> price_set
-    const variantPriceMap = new Map()
-    for (const priceSet of priceSets) {
-      // Obtener el variant_id desde variant_link si existe
-      const variantLink = (priceSet as any).variant_link
-      if (variantLink && variantLink.variant_id) {
-        // Buscar el precio para esta moneda
-        const pricesForCurrency = (priceSet.prices || []).filter(
-          (p: any) => p.currency_code?.toLowerCase() === currencyCode
-        )
-        if (pricesForCurrency.length > 0) {
-          variantPriceMap.set(variantLink.variant_id, pricesForCurrency[0])
-        }
-      }
-    }
-    
-    console.log(`💵 Variantes con precios: ${variantPriceMap.size}`)
+    console.log(`💰 Buscando precios para región ${selectedRegionId} con currency: ${currencyCode}`)
 
     // Procesar cada producto
     const productSummary = []
@@ -110,12 +84,16 @@ export async function GET(
         let hasCalculatedPrice = false
         let priceAmount = 0
         
-        // Buscar precio en el mapa
-        const priceData = variantPriceMap.get(variant.id)
-        
-        if (priceData && priceData.amount) {
-          hasCalculatedPrice = true
-          priceAmount = Number(priceData.amount) / 100
+        // Buscar precio en el price_set de la variante
+        if (variant.price_set && variant.price_set.prices) {
+          const pricesForCurrency = variant.price_set.prices.filter(
+            (p: any) => p.currency_code?.toLowerCase() === currencyCode
+          )
+          
+          if (pricesForCurrency.length > 0 && pricesForCurrency[0].amount) {
+            hasCalculatedPrice = true
+            priceAmount = Number(pricesForCurrency[0].amount) / 100
+          }
         }
 
         variantsWithPrices.push({
