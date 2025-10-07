@@ -1,5 +1,4 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { MedusaError } from "@medusajs/framework/utils"
 
 /**
  * Endpoint para listar TODOS los productos con sus precios CALCULADOS (como el storefront)
@@ -12,24 +11,24 @@ export async function GET(
   try {
     console.log('📋 Listando todos los productos con precios calculados...')
 
-    const query = req.scope.resolve("query")
     const { regionId } = req.query as { regionId?: string }
+    const query = req.scope.resolve("query")
 
-    // Si no hay regionId, obtener la primera región disponible con su currency_code
+    // Si no hay regionId, obtener la primera región disponible
     let selectedRegionId = regionId
-    let currencyCode = 'clp'
     
     if (!selectedRegionId) {
-      const { data: regions } = await query.graph({
+      const regionsResult = await query.graph({
         entity: "region",
-        fields: ["id", "currency_code"],
+        fields: ["id"],
         pagination: { take: 1 }
       })
       
-      if (regions && regions.length > 0) {
+      const regions = regionsResult.data || []
+      
+      if (regions.length > 0) {
         selectedRegionId = regions[0].id
-        currencyCode = regions[0].currency_code || 'clp'
-        console.log(`ℹ️ No se especificó regionId, usando: ${selectedRegionId} con currency: ${currencyCode}`)
+        console.log(`ℹ️ No se especificó regionId, usando: ${selectedRegionId}`)
       } else {
         res.status(400).json({
           success: false,
@@ -37,46 +36,40 @@ export async function GET(
         })
         return
       }
-    } else {
-      // Obtener el currency_code de la región especificada
-      const { data: regions } = await query.graph({
-        entity: "region",
-        fields: ["id", "currency_code"],
-        filters: { id: selectedRegionId }
-      })
-      
-      if (regions && regions.length > 0) {
-        currencyCode = regions[0].currency_code || 'clp'
-        console.log(`ℹ️ Región ${selectedRegionId} con currency: ${currencyCode}`)
-      }
     }
 
     console.log('🔍 Obteniendo productos con precios calculados para región:', selectedRegionId)
 
-    // Usar el query service para obtener productos con calculated_price
-    const { data: products } = await query.graph({
+    // Usar query.graph pero solo para productos base (sin calculated_price)
+    const productsResult = await query.graph({
       entity: "product",
       fields: [
         "id",
         "title",
         "handle",
         "status",
-        "variants.*",
-        "variants.calculated_price.*"
+        "variants.*"
       ],
       filters: {
         status: "published"
-      },
-      context: {
-        region_id: selectedRegionId,
-        currency_code: currencyCode
       },
       pagination: {
         take: 100
       }
     })
 
+    const products = productsResult.data || []
     console.log(`✅ Productos recibidos: ${products?.length || 0}`)
+    
+    // Ahora obtener precios usando el pricing service para cada variante
+    const pricingModuleService = req.scope.resolve("pricingModuleService")
+    const regionModuleService = req.scope.resolve("regionModuleService")
+    
+    // Obtener la región completa para el currency_code
+    const region = await regionModuleService.retrieveRegion(selectedRegionId)
+    const currencyCode = region.currency_code?.toLowerCase() || 'clp'
+    
+    console.log(`💰 Calculando precios para región ${selectedRegionId} con currency: ${currencyCode}`)
 
     // Procesar cada producto
     const productSummary = []
@@ -85,10 +78,30 @@ export async function GET(
       const variantsWithPrices = []
 
       for (const variant of product.variants || []) {
-        const hasCalculatedPrice = !!variant.calculated_price?.calculated_amount
-        const priceAmount = hasCalculatedPrice 
-          ? Number(variant.calculated_price.calculated_amount) / 100 
-          : 0
+        let hasCalculatedPrice = false
+        let priceAmount = 0
+        
+        try {
+          // Intentar calcular el precio para esta variante
+          if (variant.id) {
+            const priceResult = await pricingModuleService.calculatePrices(
+              { id: [variant.id] },
+              {
+                context: {
+                  currency_code: currencyCode,
+                  region_id: selectedRegionId
+                }
+              }
+            )
+            
+            if (priceResult && priceResult[variant.id]?.calculated_amount) {
+              hasCalculatedPrice = true
+              priceAmount = Number(priceResult[variant.id].calculated_amount) / 100
+            }
+          }
+        } catch (error) {
+          console.error(`Error calculando precio para variante ${variant.id}:`, error.message)
+        }
 
         variantsWithPrices.push({
           id: variant.id,
@@ -97,7 +110,7 @@ export async function GET(
           hasPrices: hasCalculatedPrice,
           priceCount: hasCalculatedPrice ? 1 : 0,
           prices: hasCalculatedPrice ? [{
-            currency: variant.calculated_price.currency_code?.toUpperCase() || 'CLP',
+            currency: currencyCode.toUpperCase(),
             amount: priceAmount,
             formatted: `$${priceAmount.toLocaleString('es-CL')}`
           }] : []
