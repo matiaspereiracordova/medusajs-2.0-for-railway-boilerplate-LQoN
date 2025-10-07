@@ -92,7 +92,8 @@ export async function GET(
           
           if (pricesForCurrency.length > 0 && pricesForCurrency[0].amount) {
             hasCalculatedPrice = true
-            priceAmount = Number(pricesForCurrency[0].amount) / 100
+            // Los precios ya vienen en la unidad correcta (no en centavos)
+            priceAmount = Number(pricesForCurrency[0].amount)
           }
         }
 
