@@ -5,6 +5,6 @@
   },
   "deploy": {
     "startCommand": "pnpm run start",
-    "postDeployCommand": "node railway-post-deploy.js"
+    "postDeployCommand": "npm run ib"
   }
 }
