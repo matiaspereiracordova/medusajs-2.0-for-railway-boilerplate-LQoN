@@ -4,7 +4,7 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "npm run start",
+    "startCommand": "pnpm run start",
     "postDeployCommand": "node railway-post-deploy.js"
   }
 }
