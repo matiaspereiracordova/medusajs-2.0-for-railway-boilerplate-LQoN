@@ -1,69 +1,88 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { IProductModuleService, IPricingModuleService } from "@medusajs/framework/types"
+import { IRegionModuleService } from "@medusajs/framework/types"
 import { ModuleRegistrationName } from "@medusajs/framework/utils"
 
 /**
- * Endpoint para listar TODOS los productos con sus precios
- * GET /admin/list-all-products-prices
+ * Endpoint para listar TODOS los productos con sus precios CALCULADOS (como el storefront)
+ * GET /admin/list-all-products-prices?regionId=reg_xxx
  */
 export async function GET(
   req: MedusaRequest,
   res: MedusaResponse
 ): Promise<void> {
   try {
-    console.log('📋 Listando todos los productos con precios...')
+    console.log('📋 Listando todos los productos con precios calculados...')
 
-    const productModuleService: IProductModuleService = req.scope.resolve(
-      ModuleRegistrationName.PRODUCT
-    )
-    const pricingModuleService: IPricingModuleService = req.scope.resolve(
-      ModuleRegistrationName.PRICING
-    )
+    const { regionId } = req.query as { regionId?: string }
 
-    // Obtener TODOS los productos
-    const products = await productModuleService.listProducts(
-      {},
-      {
-        relations: ["variants"],
-        take: 100, // Obtener hasta 100 productos
+    // Si no hay regionId, obtener la primera región disponible
+    let selectedRegionId = regionId
+    
+    if (!selectedRegionId) {
+      const regionModuleService: IRegionModuleService = req.scope.resolve(
+        ModuleRegistrationName.REGION
+      )
+      
+      const regions = await regionModuleService.listRegions({ take: 1 })
+      if (regions.length > 0) {
+        selectedRegionId = regions[0].id
+        console.log(`ℹ️ No se especificó regionId, usando: ${selectedRegionId}`)
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: "No hay regiones disponibles en el sistema"
+        })
       }
-    )
+    }
 
-    console.log(`✅ Productos encontrados: ${products.length}`)
+    // Hacer una petición HTTP al Store API (como hace el storefront)
+    const baseUrl = process.env.BACKEND_URL || 'http://localhost:9000'
+    const url = `${baseUrl}/store/products?region_id=${selectedRegionId}&fields=*variants.calculated_price&limit=100`
 
-    // Obtener TODOS los precios del sistema
-    const allPrices = await pricingModuleService.listPrices()
-    console.log(`💰 Total de precios en el sistema: ${allPrices.length}`)
+    console.log('📡 Haciendo petición a Store API:', url)
+
+    const response = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('❌ Error en Store API:', errorText)
+      return res.status(response.status).json({
+        success: false,
+        message: "Error al consultar Store API",
+        error: errorText
+      })
+    }
+
+    const data = await response.json()
+    console.log(`✅ Productos recibidos: ${data.products?.length || 0}`)
 
     // Procesar cada producto
     const productSummary = []
 
-    for (const product of products) {
+    for (const product of data.products || []) {
       const variantsWithPrices = []
 
       for (const variant of product.variants || []) {
-        // Buscar precios de esta variante
-        const variantPrices = allPrices.filter((price: any) => {
-          return price.variant_id === variant.id || 
-                 (Array.isArray(price.variant_id) && price.variant_id.includes(variant.id)) ||
-                 price.price_set_id === variant.id ||
-                 (price.price_set && price.price_set.variant_id === variant.id)
-        })
-
-        // Formatear los precios
-        const formattedPrices = variantPrices.map((p: any) => ({
-          currency: p.currency_code?.toUpperCase() || 'N/A',
-          amount: p.amount ? Number(p.amount) / 100 : 0,
-          formatted: p.amount ? `$${(Number(p.amount) / 100).toLocaleString('es-CL')}` : '$0'
-        }))
+        const hasCalculatedPrice = !!variant.calculated_price?.calculated_amount
+        const priceAmount = hasCalculatedPrice 
+          ? Number(variant.calculated_price.calculated_amount) / 100 
+          : 0
 
         variantsWithPrices.push({
           id: variant.id,
           title: variant.title || 'Sin título',
           sku: variant.sku || 'Sin SKU',
-          hasPrices: variantPrices.length > 0,
-          priceCount: variantPrices.length,
-          prices: formattedPrices
+          hasPrices: hasCalculatedPrice,
+          priceCount: hasCalculatedPrice ? 1 : 0,
+          prices: hasCalculatedPrice ? [{
+            currency: variant.calculated_price.currency_code?.toUpperCase() || 'CLP',
+            amount: priceAmount,
+            formatted: `$${priceAmount.toLocaleString('es-CL')}`
+          }] : []
         })
       }
 
@@ -87,10 +106,10 @@ export async function GET(
 
     // Estadísticas generales
     const stats = {
-      totalProducts: products.length,
+      totalProducts: productSummary.length,
       productsWithPricing: productSummary.filter(p => p.variantsWithoutPrices === 0).length,
       productsWithIssues: productSummary.filter(p => p.hasPricingIssue).length,
-      totalPricesInSystem: allPrices.length
+      totalPricesInSystem: productSummary.reduce((sum, p) => sum + p.variantsWithPrices, 0)
     }
 
     // Separar productos con y sin problemas
@@ -99,6 +118,8 @@ export async function GET(
 
     res.json({
       success: true,
+      regionId: selectedRegionId,
+      storeApiUrl: url,
       stats,
       summary: {
         message: stats.productsWithIssues > 0 
@@ -117,7 +138,8 @@ export async function GET(
     res.status(500).json({
       success: false,
       message: "Error listando productos y precios",
-      error: error.message
+      error: error.message,
+      stack: error.stack
     })
   }
 }
