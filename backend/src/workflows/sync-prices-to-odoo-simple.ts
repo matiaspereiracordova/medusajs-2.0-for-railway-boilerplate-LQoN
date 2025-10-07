@@ -105,79 +105,104 @@ const syncPricesStep = createStep(
 
           // Actualizar precio base del producto template
           let basePrice = 0
+          let baseCurrency = 'CLP'
+          
           if (product.variants && product.variants.length > 0) {
-            const firstVariant = product.variants[0]
-            const variantPrices = allPrices.filter((price: any) => {
-              return price.variant_id === firstVariant.id || 
-                     (Array.isArray(price.variant_id) && price.variant_id.includes(firstVariant.id)) ||
-                     price.price_set_id === firstVariant.id ||
-                     (price.price_set && price.price_set.variant_id === firstVariant.id)
-            })
+            // Buscar el precio más bajo como precio base (estrategia común en e-commerce)
+            let lowestPrice = Infinity
+            
+            for (const variant of product.variants) {
+              const variantPrices = allPrices.filter((price: any) => {
+                return price.variant_id === variant.id || 
+                       (Array.isArray(price.variant_id) && price.variant_id.includes(variant.id)) ||
+                       price.price_set_id === variant.id ||
+                       (price.price_set && price.price_set.variant_id === variant.id)
+              })
 
-            if (variantPrices.length > 0) {
-              const clpPrice = variantPrices.find((p: any) => p.currency_code === 'clp')
-              const usdPrice = variantPrices.find((p: any) => p.currency_code === 'usd')
-              const anyPrice = variantPrices[0]
-              
-              const selectedPrice = clpPrice || usdPrice || anyPrice
-              basePrice = Number(selectedPrice.amount) / 100
+              if (variantPrices.length > 0) {
+                const clpPrice = variantPrices.find((p: any) => p.currency_code === 'clp')
+                const usdPrice = variantPrices.find((p: any) => p.currency_code === 'usd')
+                const anyPrice = variantPrices[0]
+                
+                const selectedPrice = clpPrice || usdPrice || anyPrice
+                const priceAmount = Number(selectedPrice.amount) / 100
+                
+                if (priceAmount > 0 && priceAmount < lowestPrice) {
+                  lowestPrice = priceAmount
+                  basePrice = priceAmount
+                  baseCurrency = (selectedPrice.currency_code || 'clp').toUpperCase()
+                }
+              }
             }
           }
 
           if (basePrice > 0) {
-            await odooModuleService.updateProduct(odooProduct.id, {
-              list_price: basePrice
-            })
-            console.log(`[${timestamp}] ✅ PRICE-SYNC: Precio base actualizado: $${basePrice}`)
+            await odooModuleService.updateProductTemplatePrice(odooProduct.id, basePrice, baseCurrency)
+            console.log(`[${timestamp}] ✅ PRICE-SYNC: Precio base actualizado: $${basePrice} ${baseCurrency}`)
+          } else {
+            console.log(`[${timestamp}] ⚠️ PRICE-SYNC: No se encontró precio base válido para ${product.title}`)
           }
 
           // Sincronizar precios por variantes
           for (const variant of product.variants || []) {
-            const variantPrices = allPrices.filter((price: any) => {
-              return price.variant_id === variant.id || 
-                     (Array.isArray(price.variant_id) && price.variant_id.includes(variant.id)) ||
-                     price.price_set_id === variant.id ||
-                     (price.price_set && price.price_set.variant_id === variant.id)
-            })
+            try {
+              const variantPrices = allPrices.filter((price: any) => {
+                return price.variant_id === variant.id || 
+                       (Array.isArray(price.variant_id) && price.variant_id.includes(variant.id)) ||
+                       price.price_set_id === variant.id ||
+                       (price.price_set && price.price_set.variant_id === variant.id)
+              })
 
-            if (variantPrices.length === 0) {
-              console.log(`[${timestamp}] ⚠️ PRICE-SYNC: Variant ${variant.title} sin precios`)
-              continue
-            }
-
-            // Buscar variante en Odoo por SKU o nombre
-            const odooVariants = await odooClient.searchRead(
-              "product.product",
-              [
-                ["product_tmpl_id", "=", odooProduct.id],
-                "|",
-                ["default_code", "=", variant.sku],
-                ["name", "=", variant.title]
-              ],
-              ["id", "name", "default_code", "list_price"]
-            )
-
-            if (odooVariants.length > 0) {
-              const odooVariant = odooVariants[0]
-              
-              // Actualizar precio de la variante
-              const clpPrice = variantPrices.find((p: any) => p.currency_code === 'clp')
-              const usdPrice = variantPrices.find((p: any) => p.currency_code === 'usd')
-              const anyPrice = variantPrices[0]
-              
-              const variantPrice = clpPrice || usdPrice || anyPrice
-
-              if (variantPrice) {
-                await odooClient.update("product.product", odooVariant.id, {
-                  list_price: Number(variantPrice.amount) / 100
-                })
-                
-                console.log(`[${timestamp}] ✅ PRICE-SYNC: Variant ${variant.title} precio actualizado: $${Number(variantPrice.amount) / 100}`)
-                syncedVariants++
-                syncedPrices++
+              if (variantPrices.length === 0) {
+                console.log(`[${timestamp}] ⚠️ PRICE-SYNC: Variant ${variant.title || variant.sku} sin precios`)
+                continue
               }
-            } else {
-              console.log(`[${timestamp}] ⚠️ PRICE-SYNC: Variant ${variant.title} no encontrado en Odoo`)
+
+              // Buscar variante en Odoo por SKU o nombre
+              const odooVariants = await odooClient.searchRead(
+                "product.product",
+                [
+                  ["product_tmpl_id", "=", odooProduct.id],
+                  "|",
+                  ["default_code", "=", variant.sku],
+                  ["name", "ilike", variant.title]
+                ],
+                ["id", "name", "default_code", "list_price", "price_extra"]
+              )
+
+              if (odooVariants.length > 0) {
+                const odooVariant = odooVariants[0]
+                
+                // Seleccionar el mejor precio disponible
+                const clpPrice = variantPrices.find((p: any) => p.currency_code === 'clp')
+                const usdPrice = variantPrices.find((p: any) => p.currency_code === 'usd')
+                const anyPrice = variantPrices[0]
+                
+                const variantPrice = clpPrice || usdPrice || anyPrice
+                const variantPriceAmount = Number(variantPrice.amount) / 100
+
+                if (variantPriceAmount > 0) {
+                  // Calcular precio extra (diferencia con precio base)
+                  const priceExtra = Math.max(0, variantPriceAmount - basePrice)
+                  
+                  await odooClient.update("product.product", odooVariant.id, {
+                    list_price: variantPriceAmount,
+                    price_extra: priceExtra
+                  })
+                  
+                  console.log(`[${timestamp}] ✅ PRICE-SYNC: Variant ${variant.title || variant.sku}:`)
+                  console.log(`[${timestamp}]    - Precio: $${variantPriceAmount}`)
+                  console.log(`[${timestamp}]    - Extra: $${priceExtra}`)
+                  syncedVariants++
+                  syncedPrices++
+                }
+              } else {
+                console.log(`[${timestamp}] ⚠️ PRICE-SYNC: Variant ${variant.title || variant.sku} no encontrado en Odoo`)
+                console.log(`[${timestamp}]    - SKU buscado: ${variant.sku}`)
+                console.log(`[${timestamp}]    - Título buscado: ${variant.title}`)
+              }
+            } catch (variantError: any) {
+              console.error(`[${timestamp}] ❌ PRICE-SYNC: Error sincronizando variante ${variant.title || variant.sku}:`, variantError.message)
             }
           }
 
