@@ -1,4 +1,4 @@
-import type { MedusaContainer } from "@medusajs/types"
+import type { MedusaContainer } from "@medusajs/framework/types"
 import syncPricesToOdooWorkflow from "../workflows/sync-prices-to-odoo-simple.js"
 
 /**
