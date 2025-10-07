@@ -386,35 +386,65 @@ export default class OdooModuleService {
       })
 
       // Agrupar variantes por opciones (atributos)
-      // En Medusa, las variantes pueden tener opciones como { title: "Size", value: "L" }
+      // En Medusa 2.0, las opciones pueden venir en dos formatos:
+      // 1. Array: [{ title: "Size", value: "L" }]
+      // 2. Objeto: { Size: "L", Color: "Red" }
       const attributeMap = new Map<string, Set<string>>()
 
       variants.forEach(variant => {
-        // Si la variante tiene opciones definidas, usarlas
-        if (variant.options && variant.options.length > 0) {
+        let hasProcessedOptions = false
+        
+        // Caso 1: Options es un objeto (formato Medusa 2.0)
+        if (variant.options && typeof variant.options === 'object' && !Array.isArray(variant.options)) {
+          console.log(`🔍 Procesando opciones como objeto para ${variant.title || variant.sku}:`, variant.options)
+          
+          for (const [attrName, attrValue] of Object.entries(variant.options)) {
+            if (attrValue && typeof attrValue === 'string') {
+              if (!attributeMap.has(attrName)) {
+                attributeMap.set(attrName, new Set())
+              }
+              attributeMap.get(attrName)!.add(attrValue)
+              hasProcessedOptions = true
+            }
+          }
+        }
+        // Caso 2: Options es un array (formato anterior)
+        else if (variant.options && Array.isArray(variant.options) && variant.options.length > 0) {
+          console.log(`🔍 Procesando opciones como array para ${variant.title || variant.sku}:`, variant.options)
+          
           variant.options.forEach((option: any) => {
             const attrName = option.title || option.name || 'Size'
             const attrValue = option.value
             
-            if (!attributeMap.has(attrName)) {
-              attributeMap.set(attrName, new Set())
+            if (attrValue) {
+              if (!attributeMap.has(attrName)) {
+                attributeMap.set(attrName, new Set())
+              }
+              attributeMap.get(attrName)!.add(attrValue)
+              hasProcessedOptions = true
             }
-            attributeMap.get(attrName)!.add(attrValue)
           })
-        } else {
-          // Si no hay opciones, usar el título de la variante
-          // Extraer el valor de talla del título (ej: "S" de "SHORTS-S")
-          const match = variant.title?.match(/^(.+?)[-\s]*([SMLX]+|[0-9]+)$/i) ||
-                       variant.sku?.match(/^(.+?)[-\s]*([SMLX]+|[0-9]+)$/i)
+        }
+        
+        // Si no hay opciones o no se pudieron procesar, intentar extraer del título/SKU
+        if (!hasProcessedOptions) {
+          console.log(`⚠️ No se encontraron opciones para ${variant.title || variant.sku}, intentando extraer del título/SKU`)
           
-          if (match && match[2]) {
-            const attrValue = match[2].toUpperCase()
+          // Extraer el valor de talla del título (ej: "S" de "SHORTS-S" o simplemente "S")
+          const match = variant.title?.match(/^(.+?)[-\s]*([SMLX]+|[0-9]+)$/i) ||
+                       variant.sku?.match(/^(.+?)[-\s]*([SMLX]+|[0-9]+)$/i) ||
+                       variant.title?.match(/^([SMLX]+|[0-9]+)$/i)
+          
+          if (match && match[match.length - 1]) {
+            const attrValue = match[match.length - 1].toUpperCase()
             if (!attributeMap.has('Size')) {
               attributeMap.set('Size', new Set())
             }
             attributeMap.get('Size')!.add(attrValue)
+            console.log(`✅ Extraído valor de Size: ${attrValue}`)
           } else {
             // Si no se puede extraer, usar el título completo
+            console.log(`⚠️ No se pudo extraer valor del título/SKU, usando título completo`)
             if (!attributeMap.has('Variant')) {
               attributeMap.set('Variant', new Set())
             }
