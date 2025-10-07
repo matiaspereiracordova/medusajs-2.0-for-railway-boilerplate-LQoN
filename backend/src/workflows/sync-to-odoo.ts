@@ -473,8 +473,8 @@ const syncProductsToOdooStep = createStep(
         }
 
         // Sincronizar variantes si el producto fue creado/actualizado exitosamente
-        if (finalOdooProductId && variantData && variantData.length > 1) {
-          console.log(`🔄 Sincronizando ${variantData.length} variantes para ${odooProductData.name}...`)
+        if (finalOdooProductId && variantData && variantData.length > 0) {
+          console.log(`🔄 Sincronizando ${variantData.length} variante(s) para ${odooProductData.name}...`)
           try {
             await odooModuleService.syncProductVariants(finalOdooProductId, variantData)
             console.log(`✅ Variantes sincronizadas para ${odooProductData.name}`)
@@ -482,8 +482,6 @@ const syncProductsToOdooStep = createStep(
             console.error(`⚠️ Error sincronizando variantes para ${odooProductData.name}:`, variantError.message)
             // No incrementar errorCount porque el producto principal se sincronizó correctamente
           }
-        } else if (finalOdooProductId && variantData && variantData.length === 1) {
-          console.log(`ℹ️ Producto ${odooProductData.name} tiene solo una variante, no se crearán atributos`)
         }
       } catch (error: any) {
         errorCount++
