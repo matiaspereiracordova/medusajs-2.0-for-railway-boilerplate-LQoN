@@ -459,7 +459,36 @@ export default class OdooModuleService {
   }
 
   /**
-   * Sincroniza precios de variantes desde Medusa a Odoo
+   * Obtiene el precio de una variante en la moneda especificada
+   */
+  private getVariantPrice(variant: any, currencyCode: string = 'clp'): { amount: number; currency: string } | null {
+    if (!variant.prices || variant.prices.length === 0) {
+      return null
+    }
+
+    // Buscar precio en la moneda especificada
+    const price = variant.prices.find((p: any) => p.currency_code === currencyCode)
+    if (price) {
+      return {
+        amount: price.amount / 100, // Convertir de centavos a unidades
+        currency: price.currency_code
+      }
+    }
+
+    // Fallback a otras monedas
+    const clpPrice = variant.prices.find((p: any) => p.currency_code === 'clp')
+    const usdPrice = variant.prices.find((p: any) => p.currency_code === 'usd')
+    const eurPrice = variant.prices.find((p: any) => p.currency_code === 'eur')
+    
+    const fallbackPrice = clpPrice || usdPrice || eurPrice || variant.prices[0]
+    return {
+      amount: fallbackPrice.amount / 100,
+      currency: fallbackPrice.currency_code
+    }
+  }
+
+  /**
+   * Sincroniza precios de variantes desde Medusa a Odoo (versión mejorada)
    */
   async syncVariantPrices(productTemplateId: number, variants: Array<{ 
     id: string; 
@@ -472,46 +501,78 @@ export default class OdooModuleService {
     try {
       console.log(`💰 Sincronizando precios de ${variants.length} variantes...`)
 
-      let mainProductPrice = 0
-      let hasValidPrice = false
+      // 1. Calcular precio base del producto (primera variante con precio)
+      let basePrice = 0
+      let baseCurrency = 'clp'
+      let hasBasePrice = false
 
       for (const variant of variants) {
-        if (!variant.prices || variant.prices.length === 0) {
-          console.log(`⚠️ No hay precios para la variante ${variant.sku}`)
-          continue
-        }
-
-        // Obtener el precio en CLP (prioridad) o la primera moneda disponible
-        const clpPrice = variant.prices.find((p: any) => p.currency_code === 'clp')
-        const usdPrice = variant.prices.find((p: any) => p.currency_code === 'usd')
-        const eurPrice = variant.prices.find((p: any) => p.currency_code === 'eur')
-        
-        const selectedPrice = clpPrice || usdPrice || eurPrice || variant.prices[0]
-        const priceAmount = selectedPrice.amount / 100 // Convertir de centavos a unidades
-
-        console.log(`💰 Precio para ${variant.sku}: ${priceAmount} ${selectedPrice.currency_code}`)
-
-        // Usar el primer precio válido como precio principal del producto
-        if (!hasValidPrice) {
-          mainProductPrice = priceAmount
-          hasValidPrice = true
-          console.log(`💰 Estableciendo precio principal del producto: ${mainProductPrice} ${selectedPrice.currency_code}`)
-        }
-
-        // Buscar la variante en Odoo por SKU para actualizar su precio específico
-        const odooVariants = await this.findVariantBySku(variant.sku)
-        
-        if (odooVariants.length > 0) {
-          const odooVariant = odooVariants[0]
-          await this.updateVariantPrice(odooVariant.id, priceAmount, selectedPrice.currency_code)
-        } else {
-          console.log(`⚠️ No se encontró la variante ${variant.sku} en Odoo, solo actualizando precio principal`)
+        const variantPrice = this.getVariantPrice(variant, 'clp')
+        if (variantPrice && !hasBasePrice) {
+          basePrice = variantPrice.amount
+          baseCurrency = variantPrice.currency
+          hasBasePrice = true
+          console.log(`💰 Precio base establecido: ${basePrice} ${baseCurrency} (desde ${variant.sku})`)
+          break
         }
       }
 
-      // Actualizar el precio principal del producto template
-      if (hasValidPrice) {
-        await this.updateProductTemplatePrice(productTemplateId, mainProductPrice)
+      if (!hasBasePrice) {
+        console.log(`⚠️ No se encontró precio base para el producto`)
+        return
+      }
+
+      // 2. Actualizar precio base del producto template
+      await this.updateProductTemplatePrice(productTemplateId, basePrice, baseCurrency)
+      console.log(`✅ Precio base del producto actualizado: ${basePrice} ${baseCurrency}`)
+
+      // 3. Sincronizar precios específicos de cada variante
+      for (const variant of variants) {
+        const variantPrice = this.getVariantPrice(variant, 'clp')
+        if (!variantPrice) {
+          console.log(`⚠️ No hay precio para la variante ${variant.sku}`)
+          continue
+        }
+
+        // Buscar la variante en Odoo por SKU
+        const odooVariants = await this.findVariantBySku(variant.sku)
+        
+        if (odooVariants.length === 0) {
+          console.log(`⚠️ No se encontró la variante ${variant.sku} en Odoo`)
+          continue
+        }
+
+        const odooVariant = odooVariants[0]
+        
+        // Calcular precio extra (diferencia entre precio de variante y precio base)
+        const priceExtra = Math.max(0, variantPrice.amount - basePrice)
+        
+        console.log(`💰 Sincronizando variante ${variant.sku}:`)
+        console.log(`   - Precio variante: ${variantPrice.amount} ${variantPrice.currency}`)
+        console.log(`   - Precio base: ${basePrice} ${baseCurrency}`)
+        console.log(`   - Precio extra: ${priceExtra} ${baseCurrency}`)
+
+        // Actualizar precio específico de la variante
+        await this.client.request("call", {
+          service: "object",
+          method: "execute_kw",
+          args: [
+            this.options.dbName,
+            this.uid,
+            this.options.apiKey,
+            "product.product",
+            "write",
+            [
+              [odooVariant.id],
+              {
+                list_price: variantPrice.amount,
+                price_extra: priceExtra,
+              }
+            ],
+          ],
+        })
+
+        console.log(`✅ Variante ${variant.sku} actualizada: list_price=${variantPrice.amount}, price_extra=${priceExtra}`)
       }
 
       console.log(`✅ Precios de variantes sincronizados exitosamente`)

@@ -116,13 +116,16 @@ Atributo         | Valores
 Variant         | [Nombre de la variante]
 ```
 
-### Precios de variantes:
+### Precios de variantes (NUEVA IMPLEMENTACIÓN):
 - **Antes**: Todas las variantes mostraban "$ 0,00" en "Precio extra" ❌
-- **Después**: Cada variante muestra su precio específico desde Medusa ✅
-  - S: $10.000 CLP
-  - M: $10.000 CLP  
-  - L: $10.000 CLP
-  - XL: $10.000 CLP
+- **Después**: Sincronización completa de precios basada en documentación oficial ✅
+  - **Precio base del producto**: $10.000 CLP (product.template.list_price)
+  - **Precios específicos de variantes**: 
+    - S: $10.000 CLP (product.product.list_price)
+    - M: $10.000 CLP (product.product.list_price)
+    - L: $10.000 CLP (product.product.list_price)
+    - XL: $10.000 CLP (product.product.list_price)
+  - **Precios extra por atributos**: $0.00 (price_extra) - diferencia entre variante y base
 
 Y en la pestaña "Variantes" verás las variantes generadas automáticamente con sus precios correctos.
 
