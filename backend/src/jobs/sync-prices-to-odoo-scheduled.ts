@@ -44,8 +44,9 @@ export default async function syncPricesToOdooScheduled(container: MedusaContain
 
 export const config = {
   name: "sync-prices-to-odoo-scheduled",
-  // Ejecutar cada 6 horas: "0 */6 * * *"
+  // Ejecutar cada 5 minutos: "*/5 * * * *"
   // Para testing más frecuente: "*/30 * * * *" (cada 30 minutos)
-  schedule: "0 */6 * * *", 
+  // Producción cada 6 horas: "0 */6 * * *"
+  schedule: "*/5 * * * *", 
 }
 

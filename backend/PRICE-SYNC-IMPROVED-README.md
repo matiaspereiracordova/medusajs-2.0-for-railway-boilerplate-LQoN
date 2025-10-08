@@ -30,11 +30,11 @@ Se ha mejorado significativamente el sistema de sincronización de precios desde
 
 ### 4. **Job Programado Mejorado**
    - **Archivo**: `backend/src/jobs/sync-prices-to-odoo-scheduled.ts`
-   - **Cambio**: Ejecuta el workflow mejorado cada 6 horas
-   - **Resultado**: Precios sincronizados automáticamente de forma confiable
+   - **Cambio**: Ejecuta el workflow mejorado cada 5 minutos
+   - **Resultado**: Precios sincronizados automáticamente de forma frecuente y confiable
 
-### 5. **Nuevo Endpoint de Prueba**
-   - **URL**: `GET /admin/test-price-sync`
+### 5. **Nuevo Endpoint de Sincronización Manual**
+   - **URL**: `GET /admin/sync-prices-now`
    - **Parámetros**:
      - `productIds`: IDs de productos separados por coma (opcional)
      - `limit`: Límite de productos (default: 10)
@@ -42,7 +42,7 @@ Se ha mejorado significativamente el sistema de sincronización de precios desde
      - `regionId`: ID de región para precios (opcional, auto-detecta CLP)
    - **Ejemplo**:
      ```bash
-     GET /admin/test-price-sync?productIds=prod_01K6FVD1BY2CG2PT0JCVM4D8P1&limit=5
+     GET /admin/sync-prices-now?productIds=prod_01K6FVD1BY2CG2PT0JCVM4D8P1&limit=5
      ```
 
 ## 🔍 Método de Obtención de Precios
@@ -130,7 +130,7 @@ Deberías ver algo como:
 
 ### 2. **Probar Sincronización de Precios**
 ```bash
-GET https://backend-production-6f9f.up.railway.app/admin/test-price-sync?limit=5
+GET https://backend-production-6f9f.up.railway.app/admin/sync-prices-now?limit=5
 ```
 
 Respuesta esperada:
@@ -150,7 +150,7 @@ Respuesta esperada:
 
 ### 3. **Sincronizar un Producto Específico**
 ```bash
-GET https://backend-production-6f9f.up.railway.app/admin/test-price-sync?productIds=prod_01K6FVD1BY2CG2PT0JCVM4D8P1
+GET https://backend-production-6f9f.up.railway.app/admin/sync-prices-now?productIds=prod_01K6FVD1BY2CG2PT0JCVM4D8P1
 ```
 
 ### 4. **Verificar en Odoo**
@@ -190,8 +190,8 @@ Producto: "Pantalones cortos"
 Los precios se sincronizan automáticamente en los siguientes casos:
 
 1. **Al actualizar un producto en MedusaJS** (via subscriber)
-2. **Cada 6 horas** (via scheduled job)
-3. **Manualmente** (via endpoint `/admin/test-price-sync`)
+2. **Cada 5 minutos** (via scheduled job)
+3. **Manualmente** (via endpoint `/admin/sync-prices-now`)
 
 ## 🐛 Troubleshooting
 
@@ -200,7 +200,7 @@ Los precios se sincronizan automáticamente en los siguientes casos:
 1. Verifica que el producto exista en Odoo (debe tener `x_medusa_id`)
 2. Verifica que las variantes tengan SKU definido
 3. Revisa los logs del backend para errores específicos
-4. Usa el endpoint de prueba para debugging: `/admin/test-price-sync?productIds=PRODUCT_ID`
+4. Usa el endpoint de sincronización manual para debugging: `/admin/sync-prices-now?productIds=PRODUCT_ID`
 
 ### Problema: Precios en 0
 **Solución:**
@@ -220,11 +220,11 @@ Los precios se sincronizan automáticamente en los siguientes casos:
 - ✅ `backend/src/workflows/sync-prices-to-odoo-improved.ts` - Nuevo workflow de precios
 - ✅ `backend/src/subscribers/product-updated.ts` - Subscriber actualizado
 - ✅ `backend/src/jobs/sync-prices-to-odoo-scheduled.ts` - Job programado actualizado
-- ✅ `backend/src/api/admin/test-price-sync/route.ts` - Nuevo endpoint de prueba
+- ✅ `backend/src/api/admin/sync-prices-now/route.ts` - Endpoint de sincronización manual
 
 ## 🎯 Próximos Pasos
 
-1. **Probar la sincronización** usando el endpoint `/admin/test-price-sync`
+1. **Probar la sincronización** usando el endpoint `/admin/sync-prices-now`
 2. **Verificar en Odoo** que los precios se actualizaron correctamente
 3. **Actualizar un producto** en MedusaJS y verificar sincronización automática
 4. **Monitorear los logs** para detectar posibles errores
