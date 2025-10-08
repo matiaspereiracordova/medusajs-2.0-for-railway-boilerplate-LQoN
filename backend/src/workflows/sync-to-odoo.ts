@@ -4,9 +4,9 @@ import {
   StepResponse,
   WorkflowResponse,
 } from "@medusajs/workflows-sdk"
-import { IProductModuleService, IRegionModuleService, IPricingModuleService } from "@medusajs/framework/types"
-import { ModuleRegistrationName } from "@medusajs/framework/utils"
-import OdooModuleService, { OdooProduct } from "../modules/odoo/service.js"
+import { IRegionModuleService } from "@medusajs/framework/types"
+import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
+import OdooModuleService from "../modules/odoo/service.js"
 import { checkProductExists, updateExistingProduct } from "../utils/duplicate-detector"
 
 // Función para convertir imagen URL a base64
@@ -33,104 +33,34 @@ async function convertImageToBase64(imageUrl: string): Promise<string | null> {
   }
 }
 
-// Función mejorada para obtener precios usando el módulo de precios
-async function getProductPrice(
-  pricingModuleService: IPricingModuleService,
-  variantId: string,
-  regionId?: string
+// Función mejorada para obtener precios desde price_set (método exitoso del endpoint)
+async function getProductPriceFromPriceSet(
+  variant: any,
+  currencyCode: string = 'clp'
 ): Promise<number> {
   try {
-    console.log(`💰 Obteniendo precios para variant: ${variantId}${regionId ? ` en región: ${regionId}` : ''}`)
-    
-    // Método 1: Obtener todos los precios y filtrar por variant_id
-    console.log(`🔍 Buscando precios para variant: ${variantId}`)
-    const allPrices = await pricingModuleService.listPrices()
-    
-    console.log(`🔍 Total de precios en el sistema: ${allPrices.length}`)
-    
-    // Debug: mostrar estructura de los primeros precios
-    if (allPrices.length > 0) {
-      console.log(`🔍 Debug: Estructura del primer precio:`, Object.keys(allPrices[0]))
-      console.log(`🔍 Debug: Primer precio completo:`, allPrices[0])
-    }
-    
-    // Filtrar precios por variant_id - probar diferentes propiedades
-    const variantPrices = allPrices.filter((price: any) => {
-      const matches = 
-        price.variant_id === variantId || 
-        (Array.isArray(price.variant_id) && price.variant_id.includes(variantId)) ||
-        price.price_set_id === variantId ||
-        (price.price_set && price.price_set.variant_id === variantId) ||
-        price.id === variantId ||
-        (price.price_set && price.price_set.id === variantId)
+    // Buscar precio en el price_set de la variante (mismo método del endpoint exitoso)
+    if (variant.price_set && variant.price_set.prices) {
+      const pricesForCurrency = variant.price_set.prices.filter(
+        (p: any) => p.currency_code?.toLowerCase() === currencyCode
+      )
       
-      if (matches) {
-        console.log(`🔍 Precio encontrado para variant ${variantId}:`, {
-          id: price.id,
-          variant_id: price.variant_id,
-          price_set_id: price.price_set_id,
-          currency_code: price.currency_code,
-          amount: price.amount
-        })
+      if (pricesForCurrency.length > 0 && pricesForCurrency[0].amount) {
+        // Los precios ya vienen en la unidad correcta (no en centavos)
+        const price = Number(pricesForCurrency[0].amount)
+        console.log(`💰 Precio encontrado para variant (${currencyCode.toUpperCase()}): $${price}`)
+        return price
       }
-      
-      return matches
-    })
-    
-    console.log(`💰 Precios encontrados para variant ${variantId}: ${variantPrices.length}`)
-    
-    if (variantPrices.length > 0) {
-      // Priorizar CLP, luego USD, luego cualquier otra moneda
-      const clpPrice = variantPrices.find((price: any) => price.currency_code === 'clp')
-      const usdPrice = variantPrices.find((price: any) => price.currency_code === 'usd')
-      const eurPrice = variantPrices.find((price: any) => price.currency_code === 'eur')
-      
-      const selectedPrice = clpPrice || usdPrice || eurPrice || variantPrices[0]
-      const amount = Number(selectedPrice.amount) || 0
-      
-      console.log(`💰 Precio encontrado (${selectedPrice.currency_code}): ${amount} centavos = $${amount / 100}`)
-      return amount / 100
     }
     
-    console.log(`⚠️ No se encontraron precios para variant ${variantId}`)
+    console.log(`⚠️ No se encontró precio para variant en moneda ${currencyCode}`)
     return 0
   } catch (error) {
-    console.error(`❌ Error obteniendo precio para variant ${variantId}:`, error)
+    console.error(`❌ Error obteniendo precio para variant:`, error)
     return 0
   }
 }
 
-// Función para obtener precios usando el módulo de precios (versión mejorada)
-async function getVariantPricesFromPricingModule(pricingModuleService: IPricingModuleService, variantId: string, regionId?: string) {
-  try {
-    console.log(`💰 Obteniendo precios desde módulo de precios para variant: ${variantId}`)
-    
-    // Obtener todos los precios y filtrar
-    const allPrices = await pricingModuleService.listPrices()
-    
-    // Filtrar precios por variant_id
-    const prices = allPrices.filter((price: any) => {
-      return price.variant_id === variantId || 
-             (Array.isArray(price.variant_id) && price.variant_id.includes(variantId)) ||
-             price.price_set_id === variantId ||
-             (price.price_set && price.price_set.variant_id === variantId)
-    })
-    
-    console.log(`💰 Precios encontrados para variant ${variantId}: ${prices.length}`)
-    
-    if (prices.length > 0) {
-      prices.forEach((price: any, index: number) => {
-        const amount = Number(price.amount) || 0
-        console.log(`  ${index + 1}. ${price.currency_code}: ${amount} centavos ($${amount / 100})`)
-      })
-    }
-    
-    return prices
-  } catch (error) {
-    console.error(`❌ Error obteniendo precios desde módulo de precios para variant ${variantId}:`, error)
-    return []
-  }
-}
 
 type SyncToOdooWorkflowInput = {
   productIds?: string[]
@@ -145,7 +75,7 @@ const getDefaultRegionStep = createStep(
     try {
       console.log("🌍 Resolviendo servicio de regiones...")
       const regionModuleService: IRegionModuleService = container.resolve(
-        ModuleRegistrationName.REGION
+        Modules.REGION
       )
 
       // Buscar región de Chile (CLP)
@@ -176,15 +106,13 @@ type SyncToOdooWorkflowOutput = {
   }>
 }
 
-// Step 1: Obtener productos de Medusa
+// Step 1: Obtener productos de Medusa CON PRECIOS (método mejorado usando query.graph)
 const getMedusaProductsStep = createStep(
   "get-medusa-products",
   async (input: { input: SyncToOdooWorkflowInput, region: any }, { container }) => {
     try {
-      console.log("🔍 Resolviendo servicio de productos...")
-      const productModuleService: IProductModuleService = container.resolve(
-        ModuleRegistrationName.PRODUCT
-      )
+      console.log("🔍 Obteniendo productos con precios usando query.graph...")
+      const query = container.resolve(ContainerRegistrationKeys.QUERY)
 
       const { input: workflowInput, region } = input
       console.log("📋 Parámetros de entrada:", workflowInput)
@@ -193,26 +121,43 @@ const getMedusaProductsStep = createStep(
       const { productIds, limit = 10, offset = 0 } = workflowInput
 
       let products
+      
+      // Usar query.graph para obtener productos con price_set (método exitoso del endpoint)
+      const filters: any = {}
+      
       if (productIds && productIds.length > 0) {
+        filters.id = productIds
         console.log("🎯 Obteniendo productos específicos por IDs:", productIds)
-        products = await Promise.all(
-          productIds.map((id) =>
-            productModuleService.retrieveProduct(id, {
-              relations: ["variants", "variants.options", "categories", "tags", "images"]
-            })
-          )
-        )
-      } else {
-        console.log(`📦 Obteniendo productos (limit: ${limit}, offset: ${offset})`)
-        products = await productModuleService.listProducts(
-          {},
-          {
-            relations: ["variants", "variants.options", "categories", "tags", "images"],
-            take: limit,
-            skip: offset
-          }
-        )
       }
+
+      const productsResult = await query.graph({
+        entity: "product",
+        fields: [
+          "id",
+          "title",
+          "handle",
+          "description",
+          "status",
+          "thumbnail",
+          "variants.id",
+          "variants.title",
+          "variants.sku",
+          "variants.options",
+          "variants.calculated_price",
+          "variants.price_set.id",
+          "variants.price_set.prices.*",
+          "categories.*",
+          "tags.*",
+          "images.*"
+        ],
+        filters,
+        pagination: {
+          take: limit,
+          skip: offset
+        }
+      })
+
+      products = productsResult.data || []
 
       console.log(`✅ Productos obtenidos: ${products?.length || 0}`)
       console.log("🔍 Primer producto:", products?.[0] ? {
@@ -266,9 +211,7 @@ const transformProductsStep = createStep(
     }
     
     const odooModuleService: OdooModuleService = container.resolve("ODOO")
-    const pricingModuleService: IPricingModuleService = container.resolve(
-      ModuleRegistrationName.PRICING
-    )
+    const currencyCode = region?.currency_code?.toLowerCase() || 'clp'
 
     const transformedProducts = []
 
@@ -279,7 +222,7 @@ const transformProductsStep = createStep(
           product.id
         )
 
-        // Obtener el precio del primer variant disponible usando la función mejorada
+        // Obtener el precio del primer variant usando el método mejorado (price_set)
         let productPrice = 0
         if (product.variants && product.variants.length > 0) {
           const firstVariant = product.variants[0]
@@ -288,21 +231,20 @@ const transformProductsStep = createStep(
             id: firstVariant.id,
             title: firstVariant.title,
             sku: firstVariant.sku,
-            hasCalculatedPrice: !!firstVariant.calculated_price,
-            calculatedPrice: firstVariant.calculated_price
+            hasPriceSet: !!firstVariant.price_set,
+            pricesCount: firstVariant.price_set?.prices?.length || 0
           })
           
-          // Intentar usar calculated_price primero (si está disponible)
-          if (firstVariant.calculated_price?.calculated_amount) {
-            productPrice = firstVariant.calculated_price.calculated_amount / 100
-            console.log(`💰 Precio calculado encontrado: ${firstVariant.calculated_price.calculated_amount} centavos = $${productPrice}`)
-          } else {
-            // Usar la función mejorada para obtener precios
-            productPrice = await getProductPrice(
-              pricingModuleService, 
-              firstVariant.id, 
-              region?.id
-            )
+          // Usar el método exitoso del endpoint para obtener precios
+          productPrice = await getProductPriceFromPriceSet(firstVariant, currencyCode)
+          
+          if (productPrice === 0) {
+            console.log(`⚠️ Precio es 0 para ${product.title}, intentando con calculated_price`)
+            // Fallback: intentar usar calculated_price si está disponible
+            if (firstVariant.calculated_price?.calculated_amount) {
+              productPrice = firstVariant.calculated_price.calculated_amount / 100
+              console.log(`💰 Precio calculado encontrado: $${productPrice}`)
+            }
           }
         }
 
@@ -352,24 +294,6 @@ const transformProductsStep = createStep(
         })
 
         console.log(`📦 Producto transformado: ${product.title} - Precio: $${productPrice} - Imagen: ${productImageBase64 ? `Sí (${productImageBase64.length} caracteres base64)` : 'No'}`)
-        
-        // Debug adicional para el precio
-        if (productPrice === 0) {
-          console.log(`⚠️ Precio es 0 para ${product.title}. Debug adicional:`)
-          console.log(`  - Variants: ${product.variants?.length || 0}`)
-          if (product.variants?.[0]) {
-            console.log(`  - Primer variant ID: ${product.variants[0].id}`)
-            console.log(`  - Región ID: ${region?.id || 'No disponible'}`)
-            
-            // Intentar obtener precios con debug adicional
-            const debugPrices = await getVariantPricesFromPricingModule(
-              pricingModuleService, 
-              product.variants[0].id, 
-              region?.id
-            )
-            console.log(`  - Precios encontrados en debug: ${debugPrices.length}`)
-          }
-        }
       } catch (error) {
         console.error(`❌ Error transformando producto ${product.title}:`, error)
       }
