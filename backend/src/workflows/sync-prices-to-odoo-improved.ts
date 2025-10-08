@@ -5,7 +5,7 @@ import {
   WorkflowResponse,
 } from "@medusajs/workflows-sdk"
 import { IRegionModuleService } from "@medusajs/framework/types"
-import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
+import { Modules } from "@medusajs/framework/utils"
 import OdooModuleService from "../modules/odoo/service.js"
 import { odooClient } from "../services/odoo-client"
 
@@ -32,7 +32,7 @@ const getProductsWithPricesStep = createStep(
       const timestamp = new Date().toISOString()
       console.log(`[${timestamp}] 💰 PRICE-SYNC-V2: Iniciando sincronización de precios...`)
 
-      const query = container.resolve(ContainerRegistrationKeys.QUERY)
+      const query = container.resolve("query") as any
       const regionModuleService: IRegionModuleService = container.resolve(Modules.REGION)
 
       const { productIds, limit = 10, offset = 0 } = input

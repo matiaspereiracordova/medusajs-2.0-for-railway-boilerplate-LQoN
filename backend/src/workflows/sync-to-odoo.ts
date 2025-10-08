@@ -5,7 +5,7 @@ import {
   WorkflowResponse,
 } from "@medusajs/workflows-sdk"
 import { IRegionModuleService } from "@medusajs/framework/types"
-import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
+import { Modules } from "@medusajs/framework/utils"
 import OdooModuleService from "../modules/odoo/service.js"
 import { checkProductExists, updateExistingProduct } from "../utils/duplicate-detector"
 
@@ -112,7 +112,7 @@ const getMedusaProductsStep = createStep(
   async (input: { input: SyncToOdooWorkflowInput, region: any }, { container }) => {
     try {
       console.log("🔍 Obteniendo productos con precios usando query.graph...")
-      const query = container.resolve(ContainerRegistrationKeys.QUERY)
+      const query = container.resolve("query") as any
 
       const { input: workflowInput, region } = input
       console.log("📋 Parámetros de entrada:", workflowInput)
