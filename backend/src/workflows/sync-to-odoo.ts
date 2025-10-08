@@ -198,9 +198,7 @@ const getMedusaProductsStep = createStep(
         products = await Promise.all(
           productIds.map((id) =>
             productModuleService.retrieveProduct(id, {
-              relations: ["variants", "variants.options", "variants.prices", "categories", "tags", "images"],
-              // Intentar incluir contexto de región para calculated_price
-              ...(region && { region_id: region.id })
+              relations: ["variants", "variants.options", "categories", "tags", "images"]
             })
           )
         )
@@ -209,11 +207,9 @@ const getMedusaProductsStep = createStep(
         products = await productModuleService.listProducts(
           {},
           {
-            relations: ["variants", "variants.options", "variants.prices", "categories", "tags", "images"],
+            relations: ["variants", "variants.options", "categories", "tags", "images"],
             take: limit,
-            skip: offset,
-            // Intentar incluir contexto de región para calculated_price
-            ...(region && { region_id: region.id })
+            skip: offset
           }
         )
       }
