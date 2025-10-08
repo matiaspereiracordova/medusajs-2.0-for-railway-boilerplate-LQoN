@@ -88,3 +88,4 @@ Después de la implementación:
 - ✅ Cargos adicionales por atributos
 - ✅ Sincronización bidireccional
 - ✅ Validación de consistencia
+

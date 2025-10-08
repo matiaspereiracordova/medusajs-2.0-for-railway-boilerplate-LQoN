@@ -583,7 +583,38 @@ export default class OdooModuleService {
   }
 
   /**
-   * Sincroniza variantes de Medusa como atributos y valores en Odoo
+   * Verifica si una línea de atributo ya existe en un producto
+   */
+  async checkAttributeLineExists(productTemplateId: number, attributeId: number): Promise<boolean> {
+    await this.login()
+
+    try {
+      const existingLines = await this.client.request("call", {
+        service: "object",
+        method: "execute_kw",
+        args: [
+          this.options.dbName,
+          this.uid,
+          this.options.apiKey,
+          "product.template.attribute.line",
+          "search_read",
+          [[
+            ["product_tmpl_id", "=", productTemplateId],
+            ["attribute_id", "=", attributeId]
+          ]],
+          { fields: ["id", "attribute_id"], limit: 1 }
+        ],
+      }) as any[]
+
+      return existingLines.length > 0
+    } catch (error: any) {
+      console.error(`❌ Error verificando línea de atributo existente:`, error)
+      return false
+    }
+  }
+
+  /**
+   * Sincroniza variantes de Medusa como atributos y valores en Odoo (con verificación de duplicados)
    */
   async syncProductVariants(productTemplateId: number, variants: Array<{ title: string; sku: string; options?: any[]; prices?: any[] }>): Promise<void> {
     await this.login()
@@ -598,37 +629,29 @@ export default class OdooModuleService {
         
         // Crear un atributo genérico para la variante única
         const attributeId = await this.getOrCreateAttribute('Variant')
-        const valueId = await this.getOrCreateAttributeValue(attributeId, variant.title || variant.sku || 'Default')
         
-        // Agregar la línea de atributo al producto
-        await this.addAttributeLineToProduct(productTemplateId, attributeId, [valueId])
+        // Verificar si ya existe una línea de atributo para este atributo
+        const lineExists = await this.checkAttributeLineExists(productTemplateId, attributeId)
         
-        console.log(`✅ Variante única sincronizada: ${variant.title || variant.sku}`)
+        if (!lineExists) {
+          const valueId = await this.getOrCreateAttributeValue(attributeId, variant.title || variant.sku || 'Default')
+          
+          // Agregar la línea de atributo al producto solo si no existe
+          await this.addAttributeLineToProduct(productTemplateId, attributeId, [valueId])
+          console.log(`✅ Variante única sincronizada: ${variant.title || variant.sku}`)
+        } else {
+          console.log(`ℹ️ Línea de atributo ya existe para 'Variant', omitiendo creación`)
+        }
+        
         return
       }
 
       // Para múltiples variantes, usar la lógica existente
       console.log(`🔄 Procesando ${variants.length} variantes múltiples`)
 
-      // Primero, limpiar las líneas de atributo existentes
-      console.log(`🧹 Limpiando atributos existentes del producto`)
-      await this.client.request("call", {
-        service: "object",
-        method: "execute_kw",
-        args: [
-          this.options.dbName,
-          this.uid,
-          this.options.apiKey,
-          "product.template",
-          "write",
-          [
-            [productTemplateId],
-            {
-              attribute_line_ids: [[5, 0, 0]] // (5, 0, 0) elimina todas las líneas
-            }
-          ],
-        ],
-      })
+      // NO limpiar las líneas de atributo existentes automáticamente
+      // En su lugar, verificar qué atributos necesitan ser agregados
+      console.log(`🔍 Verificando atributos existentes antes de agregar nuevos`)
 
       // Agrupar variantes por opciones (atributos)
       // En Medusa 2.0, las opciones pueden venir en dos formatos:
@@ -702,18 +725,28 @@ export default class OdooModuleService {
         Array.from(attributeMap.entries()).map(([key, values]) => [key, Array.from(values)])
       ))
 
-      // Crear/obtener atributos y valores, y agregar líneas al producto
+      // Crear/obtener atributos y valores, y agregar líneas al producto SOLO si no existen
       for (const [attributeName, values] of attributeMap.entries()) {
         const attributeId = await this.getOrCreateAttribute(attributeName)
-        const valueIds: number[] = []
+        
+        // Verificar si ya existe una línea de atributo para este atributo
+        const lineExists = await this.checkAttributeLineExists(productTemplateId, attributeId)
+        
+        if (!lineExists) {
+          console.log(`➕ Agregando nueva línea de atributo: ${attributeName}`)
+          const valueIds: number[] = []
 
-        for (const valueName of values) {
-          const valueId = await this.getOrCreateAttributeValue(attributeId, valueName)
-          valueIds.push(valueId)
+          for (const valueName of values) {
+            const valueId = await this.getOrCreateAttributeValue(attributeId, valueName)
+            valueIds.push(valueId)
+          }
+
+          // Agregar la línea de atributo al producto solo si no existe
+          await this.addAttributeLineToProduct(productTemplateId, attributeId, valueIds)
+          console.log(`✅ Línea de atributo agregada: ${attributeName}`)
+        } else {
+          console.log(`ℹ️ Línea de atributo ya existe para '${attributeName}', omitiendo creación`)
         }
-
-        // Agregar la línea de atributo al producto
-        await this.addAttributeLineToProduct(productTemplateId, attributeId, valueIds)
       }
 
       console.log(`✅ Variantes sincronizadas exitosamente para producto ${productTemplateId}`)
