@@ -79,3 +79,4 @@ async function testOdooConnection() {
 // Ejecutar diagnóstico
 testOdooConnection().catch(console.error);
 
+

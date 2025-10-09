@@ -123,12 +123,26 @@ export default class OdooModuleService {
     await this.login()
 
     try {
+      // Agregar configuración para tracking de inventario automáticamente
+      const productDataWithInventory = {
+        ...productData,
+        // Configurar para que sea un producto rastreable (bienes/consumible)
+        type: "consu", // Tipo válido en esta versión de Odoo
+        // Activar tracking de inventario por cantidad (esto habilita el checkbox)
+        tracking: "lot", // Tracking por lotes para habilitar inventario
+        // Permitir ventas y compras
+        sale_ok: true,
+        purchase_ok: true,
+        // Configurar política de facturación
+        invoice_policy: "order", // Facturar cantidad ordenada
+      }
+
       // Crear una copia del objeto sin la imagen para el logging
-      const logData = { ...productData }
+      const logData = { ...productDataWithInventory }
       if (logData.image_1920) {
         logData.image_1920 = `[Imagen base64: ${logData.image_1920.length} caracteres]`
       }
-      console.log(`📤 Creando producto en Odoo:`, JSON.stringify(logData, null, 2))
+      console.log(`📤 Creando producto en Odoo con tracking de inventario:`, JSON.stringify(logData, null, 2))
       
       const result = await this.client.request("call", {
         service: "object",
@@ -139,11 +153,11 @@ export default class OdooModuleService {
           this.options.apiKey,
           "product.template",
           "create",
-          [productData],
+          [productDataWithInventory],
         ],
       })
 
-      console.log(`✅ Producto creado exitosamente con ID: ${result}`)
+      console.log(`✅ Producto creado exitosamente con ID: ${result} (con tracking de inventario habilitado)`)
       return result as number
     } catch (error: any) {
       console.error(`❌ Error creando producto en Odoo:`, error)
@@ -760,12 +774,26 @@ export default class OdooModuleService {
     await this.login()
 
     try {
+      // Agregar configuración para tracking de inventario automáticamente
+      const productDataWithInventory = {
+        ...productData,
+        // Asegurar que mantenga el tracking de inventario
+        type: "consu", // Tipo válido en esta versión de Odoo
+        // Activar tracking de inventario por cantidad (esto habilita el checkbox)
+        tracking: "lot", // Tracking por lotes para habilitar inventario
+        // Permitir ventas y compras
+        sale_ok: true,
+        purchase_ok: true,
+        // Configurar política de facturación
+        invoice_policy: "order", // Facturar cantidad ordenada
+      }
+
       // Crear una copia del objeto sin la imagen para el logging
-      const logData = { ...productData }
+      const logData = { ...productDataWithInventory }
       if (logData.image_1920) {
         logData.image_1920 = `[Imagen base64: ${logData.image_1920.length} caracteres]`
       }
-      console.log(`📤 Actualizando producto en Odoo (ID: ${productId}):`, JSON.stringify(logData, null, 2))
+      console.log(`📤 Actualizando producto en Odoo con tracking de inventario (ID: ${productId}):`, JSON.stringify(logData, null, 2))
       
       const result = await this.client.request("call", {
         service: "object",
@@ -776,11 +804,11 @@ export default class OdooModuleService {
           this.options.apiKey,
           "product.template",
           "write",
-          [[productId], productData],
+          [[productId], productDataWithInventory],
         ],
       })
 
-      console.log(`✅ Producto actualizado exitosamente`)
+      console.log(`✅ Producto actualizado exitosamente (con tracking de inventario habilitado)`)
       return result as boolean
     } catch (error: any) {
       console.error(`❌ Error actualizando producto en Odoo:`, error)

@@ -60,3 +60,4 @@ async function testVariantDuplicates() {
 
 // Ejecutar la prueba
 testVariantDuplicates();
+
