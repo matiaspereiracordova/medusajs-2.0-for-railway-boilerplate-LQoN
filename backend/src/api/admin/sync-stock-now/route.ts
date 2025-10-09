@@ -108,16 +108,23 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
 
     console.log(`📊 Stock obtenido para ${stockMap.size} productos`)
 
-    // 4. Obtener ubicación de stock
-    const stockLocations = await inventoryService.listStockLocations({
-      name: "Chilean Pet Warehouse"
+    // 4. Obtener ubicación de stock usando query.graph
+    const stockLocationsResult = await query.graph({
+      entity: "stock_location",
+      fields: ["id", "name"],
+      filters: {
+        name: "Chilean Pet Warehouse"
+      }
     })
 
-    let stockLocationId = stockLocations[0]?.id
+    let stockLocationId = stockLocationsResult.data?.[0]?.id
 
     if (!stockLocationId) {
-      const allLocations = await inventoryService.listStockLocations()
-      stockLocationId = allLocations[0]?.id
+      const allLocationsResult = await query.graph({
+        entity: "stock_location",
+        fields: ["id", "name"]
+      })
+      stockLocationId = allLocationsResult.data?.[0]?.id
     }
 
     if (!stockLocationId) {
@@ -161,7 +168,8 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
           
           if (currentQty !== newQuantity) {
             await inventoryService.updateInventoryLevels([{
-              id: currentLevel.id,
+              inventory_item_id: inventoryItemId,
+              location_id: stockLocationId,
               stocked_quantity: newQuantity
             }])
             

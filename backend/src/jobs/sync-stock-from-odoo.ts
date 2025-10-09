@@ -72,17 +72,24 @@ export default async function syncStockFromOdooJob(container: MedusaContainer) {
 
     console.log(`📊 Stock obtenido para ${stockMap.size} productos desde Odoo`)
 
-    // 4. Obtener la ubicación de stock predeterminada
-    const stockLocations = await inventoryService.listStockLocations({
-      name: "Chilean Pet Warehouse"
+    // 4. Obtener la ubicación de stock predeterminada usando query.graph
+    const stockLocationsResult = await query.graph({
+      entity: "stock_location",
+      fields: ["id", "name"],
+      filters: {
+        name: "Chilean Pet Warehouse"
+      }
     })
 
-    let stockLocationId = stockLocations[0]?.id
+    let stockLocationId = stockLocationsResult.data?.[0]?.id
 
     // Si no existe la ubicación específica, usar la primera disponible
     if (!stockLocationId) {
-      const allLocations = await inventoryService.listStockLocations()
-      stockLocationId = allLocations[0]?.id
+      const allLocationsResult = await query.graph({
+        entity: "stock_location",
+        fields: ["id", "name"]
+      })
+      stockLocationId = allLocationsResult.data?.[0]?.id
     }
 
     if (!stockLocationId) {
@@ -90,7 +97,7 @@ export default async function syncStockFromOdooJob(container: MedusaContainer) {
       return
     }
 
-    console.log(`📍 Usando ubicación de stock: ${stockLocations[0]?.name || 'Default'} (${stockLocationId})`)
+    console.log(`📍 Usando ubicación de stock: ${stockLocationsResult.data?.[0]?.name || 'Default'} (${stockLocationId})`)
 
     // 5. Actualizar niveles de inventario en MedusaJS
     let updatedCount = 0
@@ -123,7 +130,8 @@ export default async function syncStockFromOdooJob(container: MedusaContainer) {
           
           if (currentQty !== newQuantity) {
             await inventoryService.updateInventoryLevels([{
-              id: currentLevel.id,
+              inventory_item_id: inventoryItemId,
+              location_id: stockLocationId,
               stocked_quantity: newQuantity
             }])
             
