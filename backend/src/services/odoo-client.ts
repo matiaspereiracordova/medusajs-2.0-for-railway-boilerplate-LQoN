@@ -199,6 +199,219 @@ export class OdooClient {
       return {};
     }
   }
+
+  /**
+   * Obtener niveles de stock de un producto en Odoo
+   * @param productId ID del producto en Odoo (product.product, no product.template)
+   * @returns Objeto con información de stock
+   */
+  async getProductStock(productId: number): Promise<{
+    qty_available: number;
+    virtual_available: number;
+    incoming_qty: number;
+    outgoing_qty: number;
+  }> {
+    await this.authenticate();
+
+    try {
+      const products = await this.client.request("call", {
+        service: "object",
+        method: "execute_kw",
+        args: [
+          this.db,
+          this.uid,
+          this.password,
+          "product.product",
+          "read",
+          [[productId]],
+          { fields: ["qty_available", "virtual_available", "incoming_qty", "outgoing_qty"] }
+        ],
+      }) as any[];
+
+      if (products.length === 0) {
+        console.warn(`⚠️ Producto ${productId} no encontrado en Odoo`);
+        return {
+          qty_available: 0,
+          virtual_available: 0,
+          incoming_qty: 0,
+          outgoing_qty: 0
+        };
+      }
+
+      const stock = products[0];
+      console.log(`📦 Stock obtenido para producto ${productId}:`, {
+        disponible: stock.qty_available,
+        virtual: stock.virtual_available,
+        entrante: stock.incoming_qty,
+        saliente: stock.outgoing_qty
+      });
+
+      return {
+        qty_available: stock.qty_available || 0,
+        virtual_available: stock.virtual_available || 0,
+        incoming_qty: stock.incoming_qty || 0,
+        outgoing_qty: stock.outgoing_qty || 0
+      };
+    } catch (error: any) {
+      console.error(`❌ Error obteniendo stock para producto ${productId}:`, error);
+      return {
+        qty_available: 0,
+        virtual_available: 0,
+        incoming_qty: 0,
+        outgoing_qty: 0
+      };
+    }
+  }
+
+  /**
+   * Obtener stock de múltiples productos por SKU
+   * @param skus Array de SKUs
+   * @returns Map de SKU a información de stock
+   */
+  async getProductsStockBySku(skus: string[]): Promise<Map<string, {
+    qty_available: number;
+    virtual_available: number;
+    product_id: number;
+  }>> {
+    await this.authenticate();
+
+    try {
+      // Buscar productos por SKU (default_code en Odoo)
+      const products = await this.client.request("call", {
+        service: "object",
+        method: "execute_kw",
+        args: [
+          this.db,
+          this.uid,
+          this.password,
+          "product.product",
+          "search_read",
+          [[["default_code", "in", skus]]],
+          { fields: ["id", "default_code", "qty_available", "virtual_available"] }
+        ],
+      }) as any[];
+
+      const stockMap = new Map<string, { qty_available: number; virtual_available: number; product_id: number }>();
+      
+      products.forEach(product => {
+        if (product.default_code) {
+          stockMap.set(product.default_code, {
+            qty_available: product.qty_available || 0,
+            virtual_available: product.virtual_available || 0,
+            product_id: product.id
+          });
+        }
+      });
+
+      console.log(`📦 Stock obtenido para ${stockMap.size} productos de ${skus.length} solicitados`);
+      return stockMap;
+    } catch (error: any) {
+      console.error(`❌ Error obteniendo stock de productos por SKU:`, error);
+      return new Map();
+    }
+  }
+
+  /**
+   * Crear movimiento de stock en Odoo (para registrar ventas desde Medusa)
+   * @param productId ID del producto en Odoo
+   * @param quantity Cantidad vendida (positivo)
+   * @param reference Referencia del pedido
+   */
+  async createStockMove(productId: number, quantity: number, reference: string): Promise<boolean> {
+    await this.authenticate();
+
+    try {
+      // Obtener ubicaciones predeterminadas
+      const stockLocationId = await this.getWarehouseLocation();
+      const customerLocationId = await this.getCustomerLocation();
+
+      if (!stockLocationId || !customerLocationId) {
+        console.error("❌ No se pudieron obtener ubicaciones de stock");
+        return false;
+      }
+
+      // Crear movimiento de stock
+      const moveId = await this.client.request("call", {
+        service: "object",
+        method: "execute_kw",
+        args: [
+          this.db,
+          this.uid,
+          this.password,
+          "stock.move",
+          "create",
+          [{
+            name: `Venta Medusa: ${reference}`,
+            product_id: productId,
+            product_uom_qty: quantity,
+            product_uom: 1, // Unidad de medida (1 = Units)
+            location_id: stockLocationId,
+            location_dest_id: customerLocationId,
+            state: "done",
+            reference: reference
+          }]
+        ],
+      }) as number;
+
+      console.log(`✅ Movimiento de stock creado en Odoo: ${moveId} para ${quantity} unidades del producto ${productId}`);
+      return true;
+    } catch (error: any) {
+      console.error(`❌ Error creando movimiento de stock:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Obtener ID de ubicación de almacén
+   */
+  private async getWarehouseLocation(): Promise<number | null> {
+    try {
+      const locations = await this.client.request("call", {
+        service: "object",
+        method: "execute_kw",
+        args: [
+          this.db,
+          this.uid,
+          this.password,
+          "stock.location",
+          "search",
+          [[["usage", "=", "internal"]]],
+          { limit: 1 }
+        ],
+      }) as number[];
+
+      return locations[0] || null;
+    } catch (error: any) {
+      console.error(`❌ Error obteniendo ubicación de almacén:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Obtener ID de ubicación de clientes
+   */
+  private async getCustomerLocation(): Promise<number | null> {
+    try {
+      const locations = await this.client.request("call", {
+        service: "object",
+        method: "execute_kw",
+        args: [
+          this.db,
+          this.uid,
+          this.password,
+          "stock.location",
+          "search",
+          [[["usage", "=", "customer"]]],
+          { limit: 1 }
+        ],
+      }) as number[];
+
+      return locations[0] || null;
+    } catch (error: any) {
+      console.error(`❌ Error obteniendo ubicación de clientes:`, error);
+      return null;
+    }
+  }
 }
 
 export const odooClient = new OdooClient();
