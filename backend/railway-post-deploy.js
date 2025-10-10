@@ -58,6 +58,19 @@ async function main() {
     console.log('ℹ️ To manually sync prices, use: POST /admin/sync-prices-to-odoo');
     console.log('ℹ️ Scheduled job runs every 6 hours automatically');
     
+    // Create dog products after seed
+    console.log('🐕 Creating dog products...');
+    try {
+      execSync('npx medusa exec ./src/scripts/post-deploy-dog-products.ts', { 
+        stdio: 'inherit',
+        cwd: __dirname,
+        env: { ...process.env }
+      });
+      console.log('✅ Dog products creation completed successfully!');
+    } catch (dogProductsError) {
+      console.log('⚠️ Dog products creation error (may already exist):', dogProductsError.message);
+    }
+    
     console.log('🎉 Post-deploy tasks completed!');
     
   } catch (error) {
