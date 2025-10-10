@@ -1,28 +1,47 @@
-/dist
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+.medusa/
+build/
+
+# Environment variables
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# OS
 .DS_Store
-/uploads
-/node_modules
-yarn-error.log
-.medusa-copy
-/.idea
-static
-coverage
+Thumbs.db
 
-.medusa
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 
-!src/**
+# Testing
+coverage/
+.nyc_output/
 
-./tsconfig.tsbuildinfo
-# package-lock.json
-yarn.lock
-medusa-db.sql
-build
-.cache
+# Seed marker (no compartir en git)
+.seed-completed
 
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/sdks
-!.yarn/versions
+# Temp files
+*.tmp
+.cache/
+.temp/

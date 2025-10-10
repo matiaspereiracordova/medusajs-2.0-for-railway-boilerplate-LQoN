@@ -35,15 +35,24 @@ export default async function seedDemoData({ container }: ExecArgs) {
   logger.info("Seeding Chilean pet store data...");
   const [store] = await storeModuleService.listStores();
   
-  // Verificar si ya existen productos
+  // Verificar si ya existen productos (pero permitir forzar seed con variable de entorno)
+  const forceSeed = process.env.FORCE_SEED === 'true';
   const existingProducts = await query.graph({
     entity: "product",
     fields: ["id", "title"],
   });
   
-  if (existingProducts.data && existingProducts.data.length > 0) {
+  if (existingProducts.data && existingProducts.data.length > 0 && !forceSeed) {
     logger.info(`Found ${existingProducts.data.length} existing products, skipping product creation`);
+    logger.info(`To force seed execution, set FORCE_SEED=true environment variable`);
     return;
+  }
+  
+  if (forceSeed && existingProducts.data && existingProducts.data.length > 0) {
+    logger.warn(`⚠️ FORCE_SEED is true, but ${existingProducts.data.length} products already exist!`);
+    logger.warn(`⚠️ This will create duplicate products. Consider deleting existing products first.`);
+    logger.warn(`⚠️ Proceeding in 5 seconds... Press Ctrl+C to cancel.`);
+    await new Promise(resolve => setTimeout(resolve, 5000));
   }
   let defaultSalesChannel = await salesChannelModuleService.listSalesChannels({
     name: "Default Sales Channel",
