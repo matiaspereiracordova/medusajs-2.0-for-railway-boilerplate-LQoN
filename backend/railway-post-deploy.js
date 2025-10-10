@@ -69,6 +69,18 @@ async function main() {
       console.log('✅ Dog products creation completed successfully!');
     } catch (dogProductsError) {
       console.log('⚠️ Dog products creation error (may already exist):', dogProductsError.message);
+      console.log('🔄 Trying alternative approach...');
+      // Try alternative approach
+      try {
+        execSync('cd .medusa/server && npx medusa exec ../../src/scripts/post-deploy-dog-products.ts', { 
+          stdio: 'inherit',
+          cwd: __dirname,
+          env: { ...process.env }
+        });
+        console.log('✅ Dog products creation completed with alternative approach!');
+      } catch (altError) {
+        console.log('⚠️ Alternative approach also failed:', altError.message);
+      }
     }
     
     console.log('🎉 Post-deploy tasks completed!');
