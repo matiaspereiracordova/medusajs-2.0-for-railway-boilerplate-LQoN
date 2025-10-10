@@ -59,7 +59,7 @@ export default async function syncFromOdooScheduledJob(container: MedusaContaine
       "product.template",
       [
         ["x_medusa_id", "=", false], // Solo productos sin x_medusa_id
-        ["type", "=", "product"], // Solo productos físicos (no servicios)
+        ["type", "in", ["product", "consu"]], // Productos físicos y consumibles (no servicios)
         ["sale_ok", "=", true] // Solo productos vendibles
       ],
       ["id", "name", "list_price", "default_code", "description", "x_medusa_id", "active", "image_1920"],
@@ -189,5 +189,5 @@ export default async function syncFromOdooScheduledJob(container: MedusaContaine
 
 export const config = {
   name: "sync-from-odoo-scheduled",
-  schedule: "0 */4 * * *", // Cada 4 horas para sincronización desde Odoo
+  schedule: "*/5 * * * *", // Cada 5 minutos para sincronización desde Odoo
 }

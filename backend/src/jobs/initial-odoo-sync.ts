@@ -31,7 +31,7 @@ export default async function initialOdooSyncJob(container: MedusaContainer) {
       "product.template",
       [
         ["x_medusa_id", "=", false], // Solo productos sin x_medusa_id
-        ["type", "=", "product"], // Solo productos físicos
+        ["type", "in", ["product", "consu"]], // Productos físicos y consumibles
         ["sale_ok", "=", true] // Solo productos vendibles
       ],
       ["id", "name", "list_price", "default_code", "description", "active", "image_1920"],
