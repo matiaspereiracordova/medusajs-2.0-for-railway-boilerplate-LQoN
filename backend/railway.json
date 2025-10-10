@@ -4,6 +4,6 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "node railway-post-deploy.js && pnpm run start"
+    "startCommand": "chmod +x start-with-seed.sh && ./start-with-seed.sh"
   }
 }

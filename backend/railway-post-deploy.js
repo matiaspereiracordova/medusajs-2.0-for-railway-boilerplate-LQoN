@@ -18,10 +18,9 @@ async function main() {
 
   console.log('🌍 Is Railway?', !!isRailway);
 
-  if (!isRailway) {
-    console.log('🔧 Not in Railway environment, skipping seed...');
-    process.exit(0);
-  }
+  // For Railway, always run the seed (even if not in Railway environment)
+  // This ensures it runs in the Railway deployment
+  console.log('🌍 Railway deployment detected, proceeding with seed...');
 
   console.log('🌍 Railway environment detected, proceeding...');
 
@@ -39,35 +38,19 @@ async function main() {
       console.log('⚠️ Backend initialization error (may already be initialized):', initError.message);
     }
 
-    // Check if seed has already been run by looking for a marker file
-    const seedMarkerPath = path.join(__dirname, '.seed-completed');
+    // Always run seed in Railway deployment
+    console.log('🌱 Running database seed...');
+    console.log('📁 Current directory:', __dirname);
+    console.log('📂 Seed file path: ./src/scripts/seed.ts');
+    console.log('🔄 FORCE_SEED will be set to true to ensure seed runs');
     
-    // Force seed to run based on environment variable
-    const forceSeed = process.env.FORCE_SEED === 'true';
-    
-    if (fs.existsSync(seedMarkerPath) && !forceSeed) {
-      console.log('✅ Seed already completed, skipping...');
-      console.log('ℹ️ To force seed, set FORCE_SEED=true environment variable');
-    } else {
-      if (forceSeed) {
-        console.log('🔄 FORCE_SEED=true, running seed even if marker exists...');
-      }
-      
-      // Run the seed command
-      console.log('🌱 Running database seed...');
-      console.log('📁 Current directory:', __dirname);
-      console.log('📂 Seed file path: ./src/scripts/seed.ts');
-      
-      execSync('npx medusa exec ./src/scripts/seed.ts', { 
-        stdio: 'inherit',
-        cwd: __dirname,
-        env: { ...process.env, FORCE_SEED: forceSeed ? 'true' : 'false' }
-      });
+    execSync('npx medusa exec ./src/scripts/seed.ts', { 
+      stdio: 'inherit',
+      cwd: __dirname,
+      env: { ...process.env, FORCE_SEED: 'true' }
+    });
 
-      // Create marker file to prevent re-running
-      fs.writeFileSync(seedMarkerPath, new Date().toISOString());
-      console.log('✅ Post-deploy seed completed successfully!');
-    }
+    console.log('✅ Post-deploy seed completed successfully!');
 
     // Run price synchronization to Odoo (always run after seed)
     console.log('💰 Running price synchronization to Odoo...');
