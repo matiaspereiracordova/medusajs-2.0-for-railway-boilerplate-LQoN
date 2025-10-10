@@ -61,7 +61,7 @@ async function main() {
       execSync('npx medusa exec ./src/scripts/seed.ts', { 
         stdio: 'inherit',
         cwd: __dirname,
-        env: { ...process.env, NODE_ENV: 'production', FORCE_SEED: 'true' }
+        env: { ...process.env, FORCE_SEED: forceSeed ? 'true' : 'false' }
       });
 
       // Create marker file to prevent re-running
