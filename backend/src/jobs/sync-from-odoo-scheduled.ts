@@ -94,6 +94,28 @@ export default async function syncFromOdooScheduledJob(container: MedusaContaine
       return handle
     }
 
+    // Función para generar SKU basado en el nombre
+    const generateSKU = (name: string, id: number): string => {
+      // Tomar las primeras letras de cada palabra del nombre
+      const words = name.toLowerCase().split(' ')
+      let sku = words
+        .filter(word => word.length > 0)
+        .map(word => word.substring(0, 3))
+        .join('')
+        .replace(/[^a-z0-9]/g, '')
+        .substring(0, 8)
+      
+      // Si el SKU es muy corto, usar el ID como respaldo
+      if (sku.length < 3) {
+        sku = `PROD${id}`
+      } else {
+        // Agregar el ID al final para garantizar unicidad
+        sku = `${sku.toUpperCase()}${id}`
+      }
+      
+      return sku
+    }
+
     // Procesar cada producto con lógica anti-duplicados
     for (const odooProduct of odooProducts) {
       try {
@@ -135,7 +157,7 @@ export default async function syncFromOdooScheduledJob(container: MedusaContaine
 
         const variantData = {
           title: odooProduct.name,
-          sku: odooProduct.default_code || `SKU-${odooProduct.id}`,
+          sku: odooProduct.default_code || generateSKU(odooProduct.name, odooProduct.id),
           prices: [{
             currency_code: "clp",
             amount: Math.round((odooProduct.list_price || 0) * 100)
