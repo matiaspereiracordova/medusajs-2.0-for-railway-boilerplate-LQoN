@@ -5,7 +5,7 @@ export default async function postDeployDogProducts(container: MedusaContainer) 
 
   try {
     // Importar y ejecutar el script de creación de productos
-    const { default: createDogProducts } = await import('./create-dog-products')
+    const { default: createDogProducts } = await import('./create-dog-products.js')
     
     await createDogProducts({ container })
     
