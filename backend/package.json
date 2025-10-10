@@ -34,13 +34,16 @@
     "identify-odoo-standalone": "ts-node ./src/scripts/cleanup-odoo-duplicates-standalone.ts identify",
     "cleanup-odoo-simple": "ts-node ./src/scripts/cleanup-odoo-duplicates-simple.ts",
     "identify-odoo-simple": "ts-node ./src/scripts/cleanup-odoo-duplicates-simple.ts identify",
-    "create-dog-products": "medusa exec ./src/scripts/create-dog-products.ts"
+    "create-dog-products": "medusa exec ./src/scripts/create-dog-products.ts",
+    "import-csv": "medusa exec ./src/scripts/import-from-csv.ts",
+    "seed:chile": "medusa exec ./src/scripts/seed.ts"
   },
   "dependencies": {
     "@medusajs/admin-sdk": "2.10.2",
     "@medusajs/cli": "2.10.2",
     "@medusajs/dashboard": "2.10.2",
     "@medusajs/draft-order": "^2.10.2",
+    "@medusajs/file-s3": "^2.10.3",
     "@medusajs/framework": "2.10.2",
     "@medusajs/medusa": "2.10.2",
     "@medusajs/notification-sendgrid": "2.10.2",

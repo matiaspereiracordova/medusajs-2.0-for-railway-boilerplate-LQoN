@@ -20,6 +20,11 @@ import {
   MINIO_ACCESS_KEY,
   MINIO_SECRET_KEY,
   MINIO_BUCKET,
+  AWS_S3_BUCKET,
+  AWS_S3_REGION,
+  AWS_S3_ACCESS_KEY_ID,
+  AWS_S3_SECRET_ACCESS_KEY,
+  AWS_S3_ENDPOINT,
   MEILISEARCH_HOST,
   MEILISEARCH_ADMIN_KEY
 } from 'lib/constants';
@@ -55,7 +60,21 @@ const medusaConfig = {
       resolve: '@medusajs/file',
       options: {
         providers: [
-          ...(MINIO_ENDPOINT && MINIO_ACCESS_KEY && MINIO_SECRET_KEY ? [{
+          // AWS S3 provider (prioridad alta si está configurado)
+          ...(AWS_S3_BUCKET && AWS_S3_REGION && AWS_S3_ACCESS_KEY_ID && AWS_S3_SECRET_ACCESS_KEY ? [{
+            resolve: '@medusajs/file-s3',
+            id: 's3',
+            options: {
+              bucket: AWS_S3_BUCKET,
+              region: AWS_S3_REGION,
+              access_key_id: AWS_S3_ACCESS_KEY_ID,
+              secret_access_key: AWS_S3_SECRET_ACCESS_KEY,
+              ...(AWS_S3_ENDPOINT && { endpoint: AWS_S3_ENDPOINT })
+            }
+          }] : []),
+          // MinIO provider (si S3 no está configurado pero MinIO sí)
+          ...(!(AWS_S3_BUCKET && AWS_S3_REGION && AWS_S3_ACCESS_KEY_ID && AWS_S3_SECRET_ACCESS_KEY) && 
+              MINIO_ENDPOINT && MINIO_ACCESS_KEY && MINIO_SECRET_KEY ? [{
             resolve: './src/modules/minio-file',
             id: 'minio',
             options: {
@@ -64,14 +83,17 @@ const medusaConfig = {
               secretKey: MINIO_SECRET_KEY,
               bucket: MINIO_BUCKET // Optional, default: medusa-media
             }
-          }] : [{
+          }] : []),
+          // Local provider (fallback si ni S3 ni MinIO están configurados)
+          ...(!(AWS_S3_BUCKET && AWS_S3_REGION && AWS_S3_ACCESS_KEY_ID && AWS_S3_SECRET_ACCESS_KEY) &&
+              !(MINIO_ENDPOINT && MINIO_ACCESS_KEY && MINIO_SECRET_KEY) ? [{
             resolve: '@medusajs/file-local',
             id: 'local',
             options: {
               upload_dir: 'static',
               backend_url: `${BACKEND_URL}/static`
             }
-          }])
+          }] : [])
         ]
       }
     },

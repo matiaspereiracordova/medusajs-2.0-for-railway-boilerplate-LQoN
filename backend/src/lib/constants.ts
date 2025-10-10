@@ -67,6 +67,15 @@ export const MINIO_SECRET_KEY = process.env.MINIO_SECRET_KEY;
 export const MINIO_BUCKET = process.env.MINIO_BUCKET; // Optional, if not set bucket will be called: medusa-media
 
 /**
+ * (optional) AWS S3 configuration for file storage
+ */
+export const AWS_S3_BUCKET = process.env.AWS_S3_BUCKET;
+export const AWS_S3_REGION = process.env.AWS_S3_REGION;
+export const AWS_S3_ACCESS_KEY_ID = process.env.AWS_S3_ACCESS_KEY_ID;
+export const AWS_S3_SECRET_ACCESS_KEY = process.env.AWS_S3_SECRET_ACCESS_KEY;
+export const AWS_S3_ENDPOINT = process.env.AWS_S3_ENDPOINT; // Optional, for custom S3-compatible services
+
+/**
  * (optional) Resend API Key and from Email - do not set if using SendGrid
  */
 export const RESEND_API_KEY = process.env.RESEND_API_KEY;
